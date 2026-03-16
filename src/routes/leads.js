@@ -20,19 +20,36 @@ const leadSchema = z.object({
 });
 
 // Public: Submit a lead
-router.post('/', leadLimiter, validate(leadSchema), async (req, res, next) => {
+router.post('/', leadLimiter, validate(leadSchema), async (req, res) => {
     try {
+        console.log('Incoming lead submission:', req.body.email);
+
         const lead = await prisma.lead.create({
             data: req.body
         });
 
-        // Email notifications (async, don't block response)
-        sendLeadNotification(lead).catch(console.error);
-        sendLeadConfirmation(lead).catch(console.error);
+        console.log('Lead saved to database:', lead.id);
 
-        res.status(201).json(lead);
+        // Email notifications (Fault-tolerant)
+        try {
+            await sendLeadNotification(lead);
+            await sendLeadConfirmation(lead);
+            console.log('Notification emails triggered successfully');
+        } catch (emailError) {
+            console.error('Email notification failed but lead was saved:', emailError.message);
+        }
+
+        res.status(201).json({
+            success: true,
+            message: 'Your message has been received successfully.',
+            data: { id: lead.id }
+        });
     } catch (error) {
-        next(error);
+        console.error('CRITICAL Lead Creation Error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Internal server error during lead transmission'
+        });
     }
 });
 

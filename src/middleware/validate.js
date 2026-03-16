@@ -1,13 +1,19 @@
 const validate = (schema) => (req, res, next) => {
-    const result = schema.safeParse(req.body);
-    if (!result.success) {
-        return res.status(422).json({
-            error: 'Validation failed',
-            errors: result.error.flatten().fieldErrors
-        });
+    try {
+        const result = schema.safeParse(req.body);
+        if (!result.success) {
+            return res.status(422).json({
+                success: false,
+                error: 'Validation failed',
+                details: result.error.flatten().fieldErrors
+            });
+        }
+        req.body = result.data;
+        next();
+    } catch (error) {
+        console.error('Validation Middleware Error:', error);
+        res.status(500).json({ success: false, error: 'Internal validation error' });
     }
-    req.body = result.data;
-    next();
 };
 
 module.exports = validate;

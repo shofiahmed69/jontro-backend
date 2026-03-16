@@ -10,8 +10,15 @@ const app = express();
 // Middleware
 app.use(helmet());
 app.use(cors({
-    origin: env.FRONTEND_URL,
-    credentials: true
+    origin: [
+        process.env.FRONTEND_URL,
+        'https://jantra.vercel.app',
+        'https://jantra-p4wnpiqza-shofiahmed69s-projects.vercel.app',
+        'http://localhost:3000'
+    ].filter(Boolean),
+    credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(morgan('dev'));
 app.use(express.json());
