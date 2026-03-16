@@ -9,17 +9,29 @@ const app = express();
 
 // Middleware
 app.use(helmet());
+
 app.use(cors({
-    origin: [
-        process.env.FRONTEND_URL,
-        'https://jantra.vercel.app',
-        'https://jantra-p4wnpiqza-shofiahmed69s-projects.vercel.app',
-        'http://localhost:3000'
-    ].filter(Boolean),
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+
+        if (
+            origin.endsWith('.vercel.app') ||
+            origin === 'http://localhost:3000' ||
+            origin === env.FRONTEND_URL
+        ) {
+            return callback(null, true);
+        }
+        return callback(new Error('CORS not allowed: ' + origin));
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// Pre-flight requests
+app.options('*', cors());
+
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(globalLimiter);
