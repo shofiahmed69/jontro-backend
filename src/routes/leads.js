@@ -9,21 +9,28 @@ const { sendLeadNotification, sendLeadConfirmation } = require('../services/emai
 const router = express.Router();
 
 const leadSchema = z.object({
-    name: z.string().min(2).max(100),
+    name: z.string().min(1),
     email: z.string().email(),
-    company: z.string().max(200).optional().or(z.literal('')),
-    country: z.string().max(200).optional().or(z.literal('')),
-    service: z.string().max(200).optional().or(z.literal('')),
-    budget: z.string().max(200).optional().or(z.literal('')),
-    description: z.string().min(5).max(5000),
-    referral: z.string().max(200).optional().or(z.literal('')),
-});
+    company: z.string().optional().nullable(),
+    country: z.string().optional().nullable(),
+    service: z.string().optional().nullable(),
+    serviceInterest: z.string().optional().nullable(),
+    budget: z.string().optional().nullable(),
+    budgetRange: z.string().optional().nullable(),
+    description: z.string().optional().nullable().default(''),
+    message: z.string().optional().nullable(),
+    projectDescription: z.string().optional().nullable(),
+    referral: z.string().optional().nullable(),
+    referralSource: z.string().optional().nullable(),
+    phone: z.string().optional().nullable(),
+}).passthrough();
 
 // Public: Submit a lead
-router.post('/', leadLimiter, validate(leadSchema), async (req, res) => {
+router.post('/', (req, res, next) => {
+    console.log('RAW BODY RECEIVED:', JSON.stringify(req.body, null, 2));
+    next();
+}, leadLimiter, validate(leadSchema), async (req, res) => {
     try {
-        console.log('--- Incoming Lead Submission ---');
-        console.log('Body:', JSON.stringify(req.body, null, 2));
 
         const lead = await prisma.lead.create({
             data: req.body
