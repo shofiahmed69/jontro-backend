@@ -1,0 +1,60 @@
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const { globalLimiter } = require('./middleware/rateLimiter');
+const env = require('./config/env');
+
+const app = express();
+
+// Middleware
+app.use(helmet());
+app.use(cors({
+    origin: env.FRONTEND_URL,
+    credentials: true
+}));
+app.use(morgan('dev'));
+app.use(express.json());
+app.use(globalLimiter);
+
+// Health Check
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Import Routes
+const authRoutes = require('./routes/auth');
+const leadRoutes = require('./routes/leads');
+const blogRoutes = require('./routes/blog');
+const portfolioRoutes = require('./routes/portfolio');
+const careersRoutes = require('./routes/careers');
+const serviceRoutes = require('./routes/services');
+const testimonialRoutes = require('./routes/testimonials');
+const teamRoutes = require('./routes/team');
+const statsRoutes = require('./routes/stats');
+const adminRoutes = require('./routes/admin');
+const uploadRoutes = require('./routes/upload');
+
+// Route Registration
+app.use('/api/auth', authRoutes);
+app.use('/api/leads', leadRoutes);
+app.use('/api/blog', blogRoutes);
+app.use('/api/work', portfolioRoutes);
+app.use('/api/careers', careersRoutes);
+app.use('/api/services', serviceRoutes);
+app.use('/api/testimonials', testimonialRoutes);
+app.use('/api/team', teamRoutes);
+app.use('/api/stats', statsRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/upload', uploadRoutes);
+
+// Error Handling
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(err.status || 500).json({
+        error: err.message || 'Internal Server Error',
+        errors: err.errors
+    });
+});
+
+module.exports = app;

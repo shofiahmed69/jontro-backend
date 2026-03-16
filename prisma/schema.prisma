@@ -1,0 +1,188 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ──────────────────────────────────────────────────────────
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  EDITOR
+}
+
+enum ApplicationStatus {
+  RECEIVED
+  REVIEWING
+  INTERVIEW
+  OFFER
+  REJECTED
+}
+
+// ── Models ─────────────────────────────────────────────────────────
+
+model Lead {
+  id          String     @id @default(uuid())
+  name        String
+  email       String
+  company     String?
+  country     String?
+  service     String?
+  budget      String?
+  description String
+  referral    String?
+  status      LeadStatus @default(NEW)
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model AdminUser {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String    // bcrypt hashed — never store plain text
+  name      String?
+  role      AdminRole @default(EDITOR)
+  createdAt DateTime  @default(now())
+}
+
+model BlogPost {
+  id             String     @id @default(uuid())
+  title          String
+  slug           String     @unique
+  excerpt        String
+  content        String     @db.Text
+  heroImage      String?
+  category       String
+  tags           String[]
+  author         TeamMember @relation(fields: [authorId], references: [id])
+  authorId       String
+  readTime       Int        // minutes
+  published      Boolean    @default(false)
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+model Project {
+  id            String       @id @default(uuid())
+  title         String
+  slug          String       @unique
+  client        String
+  thumbnail     String
+  category      String[]
+  challenge     String       @db.Text
+  approach      String       @db.Text
+  features      String[]
+  techStack     String[]
+  results       String?      @db.Text
+  testimonial   Testimonial? @relation(fields: [testimonialId], references: [id])
+  testimonialId String?
+  featured      Boolean      @default(false)
+  order         Int          @default(0)
+  published     Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Service {
+  id             String   @id @default(uuid())
+  title          String
+  slug           String   @unique
+  icon           String?
+  description    String   @db.Text
+  features       String[]
+  industries     String[]
+  deliverables   String[]
+  process        Json?    // Array of { step, title, description }
+  useCases       String[]
+  techStack      String[]
+  pricingTiers   Json?    // Array of { name, price, features[] }
+  faq            Json?    // Array of { question, answer }
+  seoTitle       String?
+  seoDescription String?
+  order          Int      @default(0)
+  published      Boolean  @default(true)
+}
+
+model Testimonial {
+  id        String    @id @default(uuid())
+  name      String
+  role      String
+  avatar    String?
+  quote     String    @db.Text
+  rating    Int?
+  projects  Project[]
+  published Boolean   @default(true)
+  order     Int       @default(0)
+}
+
+model TeamMember {
+  id        String     @id @default(uuid())
+  name      String
+  role      String
+  bio       String     @db.Text
+  avatar    String?
+  linkedIn  String?
+  twitter   String?
+  blogPosts BlogPost[]
+  order     Int        @default(0)
+  published Boolean    @default(true)
+}
+
+model JobListing {
+  id               String            @id @default(uuid())
+  title            String
+  department       String
+  type             String            // Full-time, Part-time, Contract
+  location         String
+  description      String            @db.Text
+  responsibilities String[]
+  requirements     String[]
+  niceToHave       String[]
+  salaryMin        Int?
+  salaryMax        Int?
+  published        Boolean           @default(false)
+  closingDate      DateTime?
+  applications     JobApplication[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model JobApplication {
+  id           String            @id @default(uuid())
+  job          JobListing?       @relation(fields: [jobId], references: [id])
+  jobId        String?           // null = open application
+  name         String
+  email        String
+  phone        String?
+  coverLetter  String?           @db.Text
+  resumeUrl    String            // Supabase Storage or Cloudinary URL
+  portfolioUrl String?
+  linkedIn     String?
+  status       ApplicationStatus @default(RECEIVED)
+  notes        String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model Stat {
+  id    String @id @default(uuid())
+  label String // "Projects Delivered"
+  value String // "50+"
+  order Int    @default(0)
+}
