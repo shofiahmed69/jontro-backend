@@ -6,6 +6,7 @@ const { globalLimiter } = require('./middleware/rateLimiter');
 const env = require('./config/env');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // 1. CORS MUST BE FIRST
 app.use(cors({
