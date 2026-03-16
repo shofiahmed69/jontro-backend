@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 
 async function seedIfEmpty() {
     try {
+        console.log('--- Database Seed Check ---');
         const adminCount = await prisma.adminUser.count();
         if (adminCount === 0) {
             const hash = await bcrypt.hash('changeme123!', 12);
@@ -18,9 +19,13 @@ async function seedIfEmpty() {
                 }
             });
             console.log('✅ Admin user seeded automatically');
+        } else {
+            console.log('ℹ️ Admin user already exists, skipping seed');
         }
     } catch (error) {
-        console.log('❌ Seed check failed:', error.message);
+        console.warn('⚠️ Seed check encountered an error (continuing...):', error.message);
+    } finally {
+        await prisma.$disconnect();
     }
 }
 

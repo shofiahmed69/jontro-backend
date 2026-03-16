@@ -8,3 +8,6 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # NOTE: DATABASE_URL must use Session Pooler (port 5432)
+      # with ?pgbouncer=true&connection_limit=1
+      # DIRECT_URL should be direct connection (port 5432)
