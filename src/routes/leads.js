@@ -11,18 +11,19 @@ const router = express.Router();
 const leadSchema = z.object({
     name: z.string().min(2).max(100),
     email: z.string().email(),
-    company: z.string().max(100).optional(),
-    country: z.string().max(60).optional(),
-    service: z.string().max(100).optional(),
-    budget: z.string().max(40).optional(),
-    description: z.string().min(5).max(2000),
-    referral: z.string().max(100).optional(),
+    company: z.string().max(200).optional().or(z.literal('')),
+    country: z.string().max(200).optional().or(z.literal('')),
+    service: z.string().max(200).optional().or(z.literal('')),
+    budget: z.string().max(200).optional().or(z.literal('')),
+    description: z.string().min(5).max(5000),
+    referral: z.string().max(200).optional().or(z.literal('')),
 });
 
 // Public: Submit a lead
 router.post('/', leadLimiter, validate(leadSchema), async (req, res) => {
     try {
-        console.log('Incoming lead submission:', req.body.email);
+        console.log('--- Incoming Lead Submission ---');
+        console.log('Body:', JSON.stringify(req.body, null, 2));
 
         const lead = await prisma.lead.create({
             data: req.body
