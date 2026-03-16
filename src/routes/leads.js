@@ -26,17 +26,25 @@ const leadSchema = z.object({
 }).passthrough();
 
 // Public: Submit a lead
-router.post('/', (req, res, next) => {
-    console.log('RAW BODY RECEIVED:', JSON.stringify(req.body, null, 2));
-    next();
-}, leadLimiter, validate(leadSchema), async (req, res) => {
+router.post('/', leadLimiter, async (req, res) => {
     try {
+        console.log('RAW BODY RECEIVED:', JSON.stringify(req.body, null, 2));
 
+        // Create the lead FIRST, unconditionally
         const lead = await prisma.lead.create({
-            data: req.body
+            data: {
+                name: req.body.name || "Unknown Sender",
+                email: req.body.email || "no-email@provided.com",
+                company: req.body.company || "",
+                country: req.body.country || "",
+                service: req.body.service || req.body.serviceInterest || "",
+                budget: req.body.budget || req.body.budgetRange || "",
+                description: req.body.description || req.body.message || req.body.projectDescription || "No description provided",
+                referral: req.body.referral || req.body.referralSource || ""
+            }
         });
 
-        console.log('Lead saved to database:', lead.id);
+        console.log('Lead saved unconditionally to database:', lead.id);
 
         // Email notifications (Fault-tolerant)
         try {
@@ -47,14 +55,14 @@ router.post('/', (req, res, next) => {
             console.error('Email notification failed but lead was saved:', emailError.message);
         }
 
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             message: 'Your message has been received successfully.',
             data: { id: lead.id }
         });
     } catch (error) {
         console.error('CRITICAL Lead Creation Error:', error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             error: error.message || 'Internal server error during lead transmission'
         });
