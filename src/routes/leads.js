@@ -108,6 +108,20 @@ router.get('/admin', auth, async (req, res, next) => {
     }
 });
 
+// Admin: Delete lead
+router.delete('/admin/:id', auth, async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        await prisma.lead.delete({
+            where: { id }
+        });
+        res.json({ success: true, message: 'Lead deleted' });
+    } catch (error) {
+        console.error('Delete error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Admin: Update lead status
 router.patch('/admin/:id', auth, async (req, res, next) => {
     try {
