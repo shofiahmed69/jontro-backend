@@ -11,8 +11,8 @@ async function main() {
         update: {},
         create: {
             email: 'admin@jontro.com',
-            password,
-            name: 'Super Admin',
+            password: await bcrypt.hash('changeme123!', 12),
+            name: 'JONTRO Admin',
             role: 'SUPER_ADMIN'
         }
     });
