@@ -17,9 +17,25 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(globalLimiter);
 
+const prisma = require('./services/db');
+
 // Health Check
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/health', async (req, res) => {
+    try {
+        await prisma.$queryRaw`SELECT 1`;
+        res.json({
+            status: 'ok',
+            database: 'connected',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            database: 'disconnected',
+            message: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
 });
 
 // Import Routes
