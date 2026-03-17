@@ -1,120 +1,144 @@
-const express = require('express');
-const { z } = require('zod');
-const prisma = require('../services/db');
-const validate = require('../middleware/validate');
-const auth = require('../middleware/auth');
-const { generateSlug } = require('../services/slugService');
+const router = require('express').Router()
+const { PrismaClient } = require('@prisma/client')
+const prisma = new PrismaClient()
+const authMiddleware = require('../middleware/auth')
 
-const router = express.Router();
-
-const projectSchema = z.object({
-    title: z.string().min(3),
-    slug: z.string().optional(),
-    client: z.string(),
-    thumbnail: z.string().url(),
-    category: z.array(z.string()),
-    challenge: z.string(),
-    approach: z.string(),
-    features: z.array(z.string()),
-    techStack: z.array(z.string()),
-    results: z.string().optional(),
-    testimonialId: z.string().uuid().optional(),
-    featured: z.boolean().optional(),
-    order: z.number().int().optional(),
-    published: z.boolean().optional(),
-});
-
-// Public: List projects
-router.get('/', async (req, res, next) => {
+// PUBLIC - get all published projects
+router.get('/', async (req, res) => {
     try {
-        const { category, featured } = req.query;
-        const where = { published: true };
-        if (category) where.category = { has: category };
-        if (featured === 'true') where.featured = true;
+        const { category, featured } = req.query
+        const where = { published: true }
+        if (featured === 'true') where.featured = true
+        if (category) where.category = { has: category }
 
         const projects = await prisma.project.findMany({
             where,
-            orderBy: { order: 'asc' },
-            include: { testimonial: true }
-        });
-        res.json(projects);
+            orderBy: { order: 'asc' }
+        })
+        res.json({ success: true, data: projects })
     } catch (error) {
-        next(error);
+        console.error('Projects error:', error)
+        res.status(500).json({ error: error.message })
     }
-});
+})
 
-// Admin: List all projects (with pagination)
-router.get('/admin', auth, async (req, res, next) => {
+// PUBLIC - get featured projects for home page
+router.get('/featured', async (req, res) => {
     try {
-        const { page = 1, limit = 10 } = req.query;
-        const skip = (Number(page) - 1) * Number(limit);
-        const take = Number(limit);
-
-        const [projects, total] = await Promise.all([
-            prisma.project.findMany({
-                skip,
-                take,
-                orderBy: { createdAt: 'desc' }
-            }),
-            prisma.project.count()
-        ]);
-
-        res.json({
-            projects,
-            totalPages: Math.ceil(total / take),
-            currentPage: Number(page),
-            total
-        });
+        const projects = await prisma.project.findMany({
+            where: { published: true, featured: true },
+            orderBy: { order: 'asc' },
+            take: 3
+        })
+        res.json({ success: true, data: projects })
     } catch (error) {
-        next(error);
+        res.status(500).json({ error: error.message })
     }
-});
+})
 
-// Public: Get project by slug
-router.get('/:slug', async (req, res, next) => {
+// PUBLIC - get single project by slug
+router.get('/:slug', async (req, res) => {
     try {
         const project = await prisma.project.findUnique({
-            where: { slug: req.params.slug, published: true },
-            include: { testimonial: true }
-        });
-        if (!project) return res.status(404).json({ error: 'Project not found' });
-        res.json(project);
+            where: { slug: req.params.slug }
+        })
+        if (!project) {
+            return res.status(404).json({ error: 'Not found' })
+        }
+        res.json({ success: true, data: project })
     } catch (error) {
-        next(error);
+        res.status(500).json({ error: error.message })
     }
-});
+})
 
-// Admin routes
-router.post('/', auth, validate(projectSchema), async (req, res, next) => {
+// ADMIN - get all projects including unpublished
+router.get('/admin/all', authMiddleware, async (req, res) => {
     try {
-        const data = { ...req.body };
-        if (!data.slug) data.slug = generateSlug(data.title);
-        const project = await prisma.project.create({ data });
-        res.status(201).json(project);
+        const projects = await prisma.project.findMany({
+            orderBy: { createdAt: 'desc' }
+        })
+        res.json({ success: true, data: projects })
     } catch (error) {
-        next(error);
+        res.status(500).json({ error: error.message })
     }
-});
+})
 
-router.put('/:id', auth, validate(projectSchema), async (req, res, next) => {
+// ADMIN - create project
+router.post('/', authMiddleware, async (req, res) => {
+    try {
+        const {
+            title, slug, client, thumbnail,
+            category, challenge, approach,
+            features, techStack, results,
+            featured, published, order
+        } = req.body
+
+        const project = await prisma.project.create({
+            data: {
+                title,
+                slug: slug || title.toLowerCase()
+                    .replace(/\s+/g, '-')
+                    .replace(/[^a-z0-9-]/g, ''),
+                client: client || '',
+                thumbnail: thumbnail || '',
+                category: category || [],
+                challenge: challenge || '',
+                approach: approach || '',
+                features: features || [],
+                techStack: techStack || [],
+                results: results || '',
+                featured: featured || false,
+                published: published || false,
+                order: order || 0
+            }
+        })
+        res.status(201).json({ success: true, data: project })
+    } catch (error) {
+        console.error('Create project error:', error)
+        res.status(500).json({ error: error.message })
+    }
+})
+
+// ADMIN - update project
+router.put('/:id', authMiddleware, async (req, res) => {
     try {
         const project = await prisma.project.update({
             where: { id: req.params.id },
             data: req.body
-        });
-        res.json(project);
+        })
+        res.json({ success: true, data: project })
     } catch (error) {
-        next(error);
+        res.status(500).json({ error: error.message })
     }
-});
+})
 
-router.delete('/:id', auth, async (req, res, next) => {
+// ADMIN - toggle published
+router.patch('/:id/publish', authMiddleware,
+    async (req, res) => {
+        try {
+            const project = await prisma.project.findUnique({
+                where: { id: req.params.id }
+            })
+            const updated = await prisma.project.update({
+                where: { id: req.params.id },
+                data: { published: !project.published }
+            })
+            res.json({ success: true, data: updated })
+        } catch (error) {
+            res.status(500).json({ error: error.message })
+        }
+    })
+
+// ADMIN - delete project
+router.delete('/:id', authMiddleware, async (req, res) => {
     try {
-        await prisma.project.delete({ where: { id: req.params.id } });
-        res.status(204).end();
+        await prisma.project.delete({
+            where: { id: req.params.id }
+        })
+        res.json({ success: true, message: 'Project deleted' })
     } catch (error) {
-        next(error);
+        res.status(500).json({ error: error.message })
     }
-});
+})
 
-module.exports = router;
+module.exports = router

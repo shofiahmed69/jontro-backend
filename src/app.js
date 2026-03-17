@@ -75,6 +75,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/blog', blogRoutes);
 app.use('/api/work', portfolioRoutes);
+app.use('/api/admin/work', portfolioRoutes);
 app.use('/api/careers', careersRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/testimonials', testimonialRoutes);
