@@ -1,8 +1,29 @@
 const app = require('./app');
 const env = require('./config/env');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('./services/db');
 const bcrypt = require('bcryptjs');
-const prisma = new PrismaClient();
+
+async function connectWithRetry(retries = 5) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            await prisma.$connect()
+            console.log('Database connected successfully')
+            return
+        } catch (error) {
+            console.log(`DB connection attempt ${i + 1} failed:`,
+                error.message)
+            if (i < retries - 1) {
+                await new Promise(r => setTimeout(r, 5000))
+            }
+        }
+    }
+    console.error('All DB connection attempts failed')
+}
+
+// Graceful shutdown
+process.on('beforeExit', async () => {
+    await prisma.$disconnect()
+})
 
 async function seedIfEmpty() {
     try {
@@ -24,15 +45,17 @@ async function seedIfEmpty() {
         }
     } catch (error) {
         console.warn('⚠️ Seed check encountered an error (continuing...):', error.message);
-    } finally {
-        await prisma.$disconnect();
     }
 }
 
 const PORT = env.PORT || 4000;
 
-seedIfEmpty().then(() => {
+async function startServer() {
+    await connectWithRetry();
+    await seedIfEmpty();
     app.listen(PORT, () => {
         console.log(`🚀 Server running in ${env.NODE_ENV} mode on http://localhost:${PORT}`);
     });
-});
+}
+
+startServer();
