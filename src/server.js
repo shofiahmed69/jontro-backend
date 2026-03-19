@@ -1,5 +1,6 @@
 const app = require('./app');
 const env = require('./config/env');
+console.log('DATABASE_URL being used:', process.env.DATABASE_URL?.substring(0, 50) + '...');
 const prisma = require('./services/db');
 const bcrypt = require('bcryptjs');
 
