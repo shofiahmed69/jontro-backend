@@ -83,7 +83,9 @@ model Project {
   title         String
   slug          String       @unique
   client        String
-  thumbnail     String
+  thumbnail     String?
+  liveUrl       String?
+  githubUrl     String?
   category      String[]
   challenge     String       @db.Text
   approach      String       @db.Text
