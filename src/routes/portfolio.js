@@ -202,6 +202,23 @@ router.patch('/:id/publish', authMiddleware,
         }
     });
 
+// ADMIN - toggle featured
+router.patch('/:id/featured', authMiddleware,
+    async (req, res) => {
+        try {
+            const project = await prisma.project.findUnique({
+                where: { id: req.params.id }
+            });
+            const updated = await prisma.project.update({
+                where: { id: req.params.id },
+                data: { featured: !project.featured }
+            });
+            res.json({ success: true, data: updated });
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    });
+
 // ADMIN - delete project
 router.delete('/:id', authMiddleware, async (req, res) => {
     try {
