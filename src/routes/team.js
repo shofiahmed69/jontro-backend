@@ -25,7 +25,13 @@ const teamMemberSchema = z.object({
     role: z.string().trim().min(1),
     department: z.preprocess(normalizeOptionalString, z.string().trim().optional()),
     teamId: z.preprocess(normalizeOptionalString, z.string().trim().optional()),
-    bio: z.string().trim().min(1),
+    bio: z.preprocess(
+        (value) => {
+            if (typeof value !== 'string') return '';
+            return value.trim();
+        },
+        z.string()
+    ),
     avatar: z.preprocess(normalizeOptionalUrl, z.string().url().optional()),
     linkedIn: z.preprocess(normalizeOptionalUrl, z.string().url().optional()),
     twitter: z.preprocess(normalizeOptionalUrl, z.string().url().optional()),
