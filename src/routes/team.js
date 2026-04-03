@@ -6,15 +6,28 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 
+const normalizeOptionalString = (value) => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    return trimmed === '' ? undefined : trimmed;
+};
+
+const normalizeOptionalUrl = (value) => {
+    const normalized = normalizeOptionalString(value);
+    if (typeof normalized !== 'string') return normalized;
+    if (/^https?:\/\//i.test(normalized)) return normalized;
+    return `https://${normalized}`;
+};
+
 const teamMemberSchema = z.object({
-    name: z.string().min(2),
-    role: z.string(),
-    department: z.string().optional(),
-    teamId: z.string().optional(),
-    bio: z.string(),
-    avatar: z.string().url().optional(),
-    linkedIn: z.string().url().optional(),
-    twitter: z.string().url().optional(),
+    name: z.string().trim().min(2),
+    role: z.string().trim().min(1),
+    department: z.preprocess(normalizeOptionalString, z.string().trim().optional()),
+    teamId: z.preprocess(normalizeOptionalString, z.string().trim().optional()),
+    bio: z.string().trim().min(1),
+    avatar: z.preprocess(normalizeOptionalUrl, z.string().url().optional()),
+    linkedIn: z.preprocess(normalizeOptionalUrl, z.string().url().optional()),
+    twitter: z.preprocess(normalizeOptionalUrl, z.string().url().optional()),
     order: z.number().int().optional(),
     published: z.boolean().optional(),
 });
