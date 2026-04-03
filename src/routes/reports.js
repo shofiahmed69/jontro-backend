@@ -4,24 +4,9 @@ const prisma = require('../services/db');
 const auth = require('../middleware/auth');
 const employeeAuth = require('../middleware/employeeAuth');
 const { buildReportAnalytics } = require('../services/report-analytics');
+const teamMembers = require('../services/team-members');
 
 const router = express.Router();
-
-const teamMemberAdminSelect = {
-    id: true,
-    name: true,
-    role: true,
-    department: true,
-    teamId: true,
-    bio: true,
-    avatar: true,
-    linkedIn: true,
-    twitter: true,
-    workEmail: true,
-    employeeActive: true,
-    order: true,
-    published: true
-};
 
 const reportInclude = {
     teamMember: {
@@ -94,9 +79,7 @@ const settingsSchema = z.object({
 });
 
 async function resolveTeamMember(teamMemberId) {
-    return prisma.teamMember.findUnique({
-        where: { id: teamMemberId }
-    });
+    return teamMembers.getTeamMemberById(teamMemberId);
 }
 
 async function safeFindReports(where = {}) {
@@ -120,10 +103,7 @@ function createReportTitle(periodType, memberName) {
 router.get('/employee/my', employeeAuth, async (req, res, next) => {
     try {
         const [teamMember, reports] = await Promise.all([
-            prisma.teamMember.findUnique({
-                where: { id: req.employee.teamMemberId },
-                select: teamMemberAdminSelect
-            }),
+            teamMembers.getTeamMemberById(req.employee.teamMemberId),
             safeFindReports({ teamMemberId: req.employee.teamMemberId })
         ]);
 
@@ -207,10 +187,7 @@ router.get('/analytics', auth, async (req, res, next) => {
 router.get('/team-overview', auth, async (req, res, next) => {
     try {
         const [members, reports] = await Promise.all([
-            prisma.teamMember.findMany({
-                select: teamMemberAdminSelect,
-                orderBy: { order: 'asc' }
-            }),
+            teamMembers.listTeamMembers(),
             safeFindReports()
         ]);
 

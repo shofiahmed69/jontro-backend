@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const prisma = require('../services/db');
+const teamMembers = require('../services/team-members');
 const auth = require('../middleware/auth');
 const employeeAuth = require('../middleware/employeeAuth');
 
@@ -74,9 +75,7 @@ router.post('/employee/login', async (req, res) => {
             return res.status(400).json({ error: 'Email and password are required' });
         }
 
-        const employee = await prisma.teamMember.findUnique({
-            where: { workEmail: email }
-        });
+        const employee = await teamMembers.getTeamMemberByWorkEmail(email);
 
         if (!employee || !employee.employeeActive || !employee.passwordHash) {
             return res.status(401).json({ error: 'Invalid credentials' });
@@ -132,18 +131,7 @@ router.get('/me', auth, async (req, res, next) => {
 
 router.get('/employee/me', employeeAuth, async (req, res, next) => {
     try {
-        const user = await prisma.teamMember.findUnique({
-            where: { id: req.employee.teamMemberId },
-            select: {
-                id: true,
-                workEmail: true,
-                name: true,
-                role: true,
-                department: true,
-                teamId: true,
-                employeeActive: true
-            }
-        });
+        const user = await teamMembers.getTeamMemberById(req.employee.teamMemberId);
 
         if (!user || !user.employeeActive) {
             return res.status(404).json({ error: 'Employee not found' });

@@ -1,7 +1,7 @@
 const express = require('express');
 const { z } = require('zod');
 const bcrypt = require('bcryptjs');
-const prisma = require('../services/db');
+const teamMembers = require('../services/team-members');
 const validate = require('../middleware/validate');
 const auth = require('../middleware/auth');
 
@@ -42,36 +42,6 @@ const teamMemberSchema = z.object({
     published: z.boolean().optional(),
 });
 
-const adminTeamMemberSelect = {
-    id: true,
-    name: true,
-    role: true,
-    department: true,
-    teamId: true,
-    bio: true,
-    avatar: true,
-    linkedIn: true,
-    twitter: true,
-    workEmail: true,
-    employeeActive: true,
-    order: true,
-    published: true
-};
-
-const publicTeamMemberSelect = {
-    id: true,
-    name: true,
-    role: true,
-    department: true,
-    teamId: true,
-    bio: true,
-    avatar: true,
-    linkedIn: true,
-    twitter: true,
-    order: true,
-    published: true
-};
-
 async function buildTeamMemberData(payload, existingMember) {
     const data = {
         name: payload.name,
@@ -99,10 +69,7 @@ async function buildTeamMemberData(payload, existingMember) {
 
 router.get('/admin/all', auth, async (req, res, next) => {
     try {
-        const team = await prisma.teamMember.findMany({
-            select: adminTeamMemberSelect,
-            orderBy: { order: 'asc' }
-        });
+        const team = await teamMembers.listTeamMembers();
         res.json(team);
     } catch (error) {
         next(error);
@@ -112,11 +79,7 @@ router.get('/admin/all', auth, async (req, res, next) => {
 // Public: List team
 router.get('/', async (req, res, next) => {
     try {
-        const team = await prisma.teamMember.findMany({
-            where: { published: true },
-            select: publicTeamMemberSelect,
-            orderBy: { order: 'asc' }
-        });
+        const team = await teamMembers.listTeamMembers({ publishedOnly: true });
         res.json(team);
     } catch (error) {
         next(error);
@@ -127,10 +90,7 @@ router.get('/', async (req, res, next) => {
 router.post('/', auth, validate(teamMemberSchema), async (req, res, next) => {
     try {
         const data = await buildTeamMemberData(req.body);
-        const member = await prisma.teamMember.create({
-            data,
-            select: adminTeamMemberSelect
-        });
+        const member = await teamMembers.createTeamMember(data);
         res.status(201).json(member);
     } catch (error) {
         next(error);
@@ -139,20 +99,14 @@ router.post('/', auth, validate(teamMemberSchema), async (req, res, next) => {
 
 router.put('/:id', auth, validate(teamMemberSchema), async (req, res, next) => {
     try {
-        const existingMember = await prisma.teamMember.findUnique({
-            where: { id: req.params.id }
-        });
+        const existingMember = await teamMembers.getTeamMemberById(req.params.id, { includePassword: true });
 
         if (!existingMember) {
             return res.status(404).json({ error: 'Team member not found' });
         }
 
         const data = await buildTeamMemberData(req.body, existingMember);
-        const member = await prisma.teamMember.update({
-            where: { id: req.params.id },
-            data,
-            select: adminTeamMemberSelect
-        });
+        const member = await teamMembers.updateTeamMember(req.params.id, data);
         res.json(member);
     } catch (error) {
         next(error);
@@ -161,7 +115,7 @@ router.put('/:id', auth, validate(teamMemberSchema), async (req, res, next) => {
 
 router.delete('/:id', auth, async (req, res, next) => {
     try {
-        await prisma.teamMember.delete({ where: { id: req.params.id } });
+        await teamMembers.deleteTeamMember(req.params.id);
         res.status(204).end();
     } catch (error) {
         next(error);
