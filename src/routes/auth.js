@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const prisma = require('../services/db');
 const auth = require('../middleware/auth');
+const employeeAuth = require('../middleware/employeeAuth');
 
 const router = express.Router();
 
@@ -38,7 +39,8 @@ router.post('/login', async (req, res) => {
             {
                 id: admin.id,
                 email: admin.email,
-                role: admin.role
+                role: admin.role,
+                type: 'admin'
             },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
@@ -63,6 +65,59 @@ router.post('/login', async (req, res) => {
     }
 });
 
+router.post('/employee/login', async (req, res) => {
+    try {
+        const email = req.body?.email?.trim().toLowerCase();
+        const password = req.body?.password;
+
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
+        }
+
+        const employee = await prisma.teamMember.findUnique({
+            where: { workEmail: email }
+        });
+
+        if (!employee || !employee.employeeActive || !employee.passwordHash) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        const validPassword = await bcrypt.compare(password, employee.passwordHash);
+
+        if (!validPassword) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        const token = jwt.sign(
+            {
+                type: 'employee',
+                teamMemberId: employee.id,
+                email: employee.workEmail,
+                role: employee.role,
+                name: employee.name
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        res.json({
+            success: true,
+            token,
+            user: {
+                id: employee.id,
+                email: employee.workEmail,
+                name: employee.name,
+                role: employee.role,
+                department: employee.department,
+                teamId: employee.teamId
+            }
+        });
+    } catch (error) {
+        console.error('Employee login route error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 router.get('/me', auth, async (req, res, next) => {
     try {
         const user = await prisma.adminUser.findUnique({
@@ -70,6 +125,38 @@ router.get('/me', auth, async (req, res, next) => {
             select: { id: true, email: true, name: true, role: true }
         });
         res.json(user);
+    } catch (error) {
+        next(error);
+    }
+});
+
+router.get('/employee/me', employeeAuth, async (req, res, next) => {
+    try {
+        const user = await prisma.teamMember.findUnique({
+            where: { id: req.employee.teamMemberId },
+            select: {
+                id: true,
+                workEmail: true,
+                name: true,
+                role: true,
+                department: true,
+                teamId: true,
+                employeeActive: true
+            }
+        });
+
+        if (!user || !user.employeeActive) {
+            return res.status(404).json({ error: 'Employee not found' });
+        }
+
+        res.json({
+            id: user.id,
+            email: user.workEmail,
+            name: user.name,
+            role: user.role,
+            department: user.department,
+            teamId: user.teamId
+        });
     } catch (error) {
         next(error);
     }

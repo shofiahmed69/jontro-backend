@@ -107,6 +107,21 @@ async function ensureWorkStreamSchema() {
             ADD COLUMN IF NOT EXISTS "teamId" TEXT
         `);
         await prisma.$executeRawUnsafe(`
+            ALTER TABLE "TeamMember"
+            ADD COLUMN IF NOT EXISTS "workEmail" TEXT
+        `);
+        await prisma.$executeRawUnsafe(`
+            ALTER TABLE "TeamMember"
+            ADD COLUMN IF NOT EXISTS "passwordHash" TEXT
+        `);
+        await prisma.$executeRawUnsafe(`
+            ALTER TABLE "TeamMember"
+            ADD COLUMN IF NOT EXISTS "employeeActive" BOOLEAN NOT NULL DEFAULT true
+        `);
+        await prisma.$executeRawUnsafe(`
+            CREATE UNIQUE INDEX IF NOT EXISTS "TeamMember_workEmail_key" ON "TeamMember"("workEmail")
+        `);
+        await prisma.$executeRawUnsafe(`
             CREATE TABLE IF NOT EXISTS "AdminSetting" (
                 "id" TEXT NOT NULL DEFAULT 'global',
                 "dailyCutoffTime" TEXT NOT NULL DEFAULT '18:00',
@@ -133,7 +148,8 @@ async function ensureWorkStreamSchema() {
                 "feedback" TEXT,
                 "revisionCount" INTEGER NOT NULL DEFAULT 0,
                 "teamMemberId" TEXT,
-                "authorId" TEXT NOT NULL,
+                "authorId" TEXT,
+                "submittedById" TEXT,
                 "reviewedById" TEXT,
                 "submittedAt" TIMESTAMP(3),
                 "reviewedAt" TIMESTAMP(3),
@@ -142,12 +158,31 @@ async function ensureWorkStreamSchema() {
                 CONSTRAINT "WorkReport_pkey" PRIMARY KEY ("id"),
                 CONSTRAINT "WorkReport_teamMemberId_fkey" FOREIGN KEY ("teamMemberId") REFERENCES "TeamMember"("id") ON DELETE SET NULL ON UPDATE CASCADE,
                 CONSTRAINT "WorkReport_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "AdminUser"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+                CONSTRAINT "WorkReport_submittedById_fkey" FOREIGN KEY ("submittedById") REFERENCES "TeamMember"("id") ON DELETE SET NULL ON UPDATE CASCADE,
                 CONSTRAINT "WorkReport_reviewedById_fkey" FOREIGN KEY ("reviewedById") REFERENCES "AdminUser"("id") ON DELETE SET NULL ON UPDATE CASCADE
             )
+        `);
+        await prisma.$executeRawUnsafe(`
+            ALTER TABLE "WorkReport"
+            ALTER COLUMN "authorId" DROP NOT NULL
+        `);
+        await prisma.$executeRawUnsafe(`
+            ALTER TABLE "WorkReport"
+            ADD COLUMN IF NOT EXISTS "submittedById" TEXT
+        `);
+        await prisma.$executeRawUnsafe(`
+            DO $$ BEGIN
+                ALTER TABLE "WorkReport"
+                ADD CONSTRAINT "WorkReport_submittedById_fkey"
+                FOREIGN KEY ("submittedById") REFERENCES "TeamMember"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
         `);
         await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "WorkReport_status_idx" ON "WorkReport"("status")`);
         await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "WorkReport_department_idx" ON "WorkReport"("department")`);
         await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "WorkReport_submittedAt_idx" ON "WorkReport"("submittedAt")`);
+        await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "WorkReport_submittedById_idx" ON "WorkReport"("submittedById")`);
         await prisma.$executeRawUnsafe(`
             INSERT INTO "AdminSetting" ("id")
             VALUES ('global')

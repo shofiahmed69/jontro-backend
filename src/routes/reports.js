@@ -2,9 +2,26 @@ const express = require('express');
 const { z } = require('zod');
 const prisma = require('../services/db');
 const auth = require('../middleware/auth');
+const employeeAuth = require('../middleware/employeeAuth');
 const { buildReportAnalytics } = require('../services/report-analytics');
 
 const router = express.Router();
+
+const teamMemberAdminSelect = {
+    id: true,
+    name: true,
+    role: true,
+    department: true,
+    teamId: true,
+    bio: true,
+    avatar: true,
+    linkedIn: true,
+    twitter: true,
+    workEmail: true,
+    employeeActive: true,
+    order: true,
+    published: true
+};
 
 const reportInclude = {
     teamMember: {
@@ -31,6 +48,14 @@ const reportInclude = {
             name: true,
             role: true
         }
+    },
+    submittedBy: {
+        select: {
+            id: true,
+            name: true,
+            role: true,
+            workEmail: true
+        }
     }
 };
 
@@ -50,6 +75,16 @@ const reviewSchema = z.object({
     feedback: z.string().optional().default('')
 });
 
+const employeeReportSchema = z.object({
+    periodType: z.enum(['DAILY', 'WEEKLY', 'MONTHLY']),
+    title: z.string().min(3).optional(),
+    accomplishments: z.string().min(3),
+    nextSteps: z.string().min(3),
+    blockers: z.string().optional().default(''),
+    blockerSeverity: z.enum(['NONE', 'LOW', 'MEDIUM', 'CRITICAL']).optional().default('NONE'),
+    status: z.enum(['DRAFT', 'SUBMITTED']).optional().default('SUBMITTED')
+});
+
 const settingsSchema = z.object({
     dailyCutoffTime: z.string().min(3),
     weeklySummaryDay: z.string().min(3),
@@ -64,10 +99,81 @@ async function resolveTeamMember(teamMemberId) {
     });
 }
 
+async function safeFindReports(where = {}) {
+    try {
+        return await prisma.workReport.findMany({
+            where,
+            include: reportInclude,
+            orderBy: [{ submittedAt: 'desc' }, { createdAt: 'desc' }]
+        });
+    } catch (error) {
+        console.warn('WorkReport query fallback triggered:', error.message);
+        return [];
+    }
+}
+
 function createReportTitle(periodType, memberName) {
     const stamp = new Date().toISOString().slice(0, 10);
     return `${periodType} Report · ${memberName} · ${stamp}`;
 }
+
+router.get('/employee/my', employeeAuth, async (req, res, next) => {
+    try {
+        const [teamMember, reports] = await Promise.all([
+            prisma.teamMember.findUnique({
+                where: { id: req.employee.teamMemberId },
+                select: teamMemberAdminSelect
+            }),
+            safeFindReports({ teamMemberId: req.employee.teamMemberId })
+        ]);
+
+        if (!teamMember || !teamMember.employeeActive) {
+            return res.status(404).json({ error: 'Employee not found' });
+        }
+
+        res.json({
+            employee: teamMember,
+            reports,
+            analytics: buildReportAnalytics(reports, { teamMembers: [teamMember] })
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
+router.post('/employee/submit', employeeAuth, async (req, res, next) => {
+    try {
+        const payload = employeeReportSchema.parse(req.body);
+        const teamMember = await resolveTeamMember(req.employee.teamMemberId);
+
+        if (!teamMember || !teamMember.employeeActive) {
+            return res.status(404).json({ error: 'Employee not found' });
+        }
+
+        const now = new Date();
+        const report = await prisma.workReport.create({
+            data: {
+                title: payload.title?.trim() || createReportTitle(payload.periodType, teamMember.name),
+                periodType: payload.periodType,
+                status: payload.status,
+                department: teamMember.department,
+                teamId: teamMember.teamId || null,
+                accomplishments: payload.accomplishments.trim(),
+                nextSteps: payload.nextSteps.trim(),
+                blockers: payload.blockers?.trim() || '',
+                blockerSeverity: payload.blockerSeverity,
+                teamMemberId: teamMember.id,
+                submittedById: teamMember.id,
+                submittedAt: payload.status === 'DRAFT' ? null : now
+            },
+            include: reportInclude
+        });
+
+        res.status(201).json(report);
+    } catch (error) {
+        next(error);
+    }
+});
 
 router.get('/', auth, async (req, res, next) => {
     try {
@@ -77,11 +183,7 @@ router.get('/', auth, async (req, res, next) => {
         if (req.query.teamMemberId) where.teamMemberId = req.query.teamMemberId;
         if (req.query.department) where.department = req.query.department;
 
-        const reports = await prisma.workReport.findMany({
-            where,
-            include: reportInclude,
-            orderBy: [{ submittedAt: 'desc' }, { createdAt: 'desc' }]
-        });
+        const reports = await safeFindReports(where);
 
         res.json({
             reports,
@@ -94,10 +196,7 @@ router.get('/', auth, async (req, res, next) => {
 
 router.get('/analytics', auth, async (req, res, next) => {
     try {
-        const reports = await prisma.workReport.findMany({
-            include: reportInclude,
-            orderBy: [{ submittedAt: 'desc' }, { createdAt: 'desc' }]
-        });
+        const reports = await safeFindReports();
 
         res.json(buildReportAnalytics(reports));
     } catch (error) {
@@ -109,12 +208,10 @@ router.get('/team-overview', auth, async (req, res, next) => {
     try {
         const [members, reports] = await Promise.all([
             prisma.teamMember.findMany({
+                select: teamMemberAdminSelect,
                 orderBy: { order: 'asc' }
             }),
-            prisma.workReport.findMany({
-                include: reportInclude,
-                orderBy: [{ submittedAt: 'desc' }, { createdAt: 'desc' }]
-            })
+            safeFindReports()
         ]);
 
         const analytics = buildReportAnalytics(reports);
@@ -151,11 +248,7 @@ router.get('/team-overview', auth, async (req, res, next) => {
 
 router.get('/audit', auth, async (req, res, next) => {
     try {
-        const reports = await prisma.workReport.findMany({
-            include: reportInclude,
-            orderBy: { updatedAt: 'desc' },
-            take: 100
-        });
+        const reports = (await safeFindReports()).slice(0, 100).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 
         const auditLog = reports.flatMap((report) => {
             const entries = [

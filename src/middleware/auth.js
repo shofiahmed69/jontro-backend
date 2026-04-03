@@ -23,6 +23,12 @@ module.exports = (req, res, next) => {
             process.env.JWT_SECRET
         );
 
+        if (decoded.type && decoded.type !== 'admin') {
+            return res.status(403).json({
+                error: 'Admin access required'
+            });
+        }
+
         req.admin = decoded;
         console.log('JWT verified for:', decoded.email);
         next();

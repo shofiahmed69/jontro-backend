@@ -166,8 +166,12 @@ model TeamMember {
   avatar      String?
   linkedIn    String?
   twitter     String?
+  workEmail   String?      @unique
+  passwordHash String?
+  employeeActive Boolean   @default(true)
   blogPosts   BlogPost[]
   workReports WorkReport[]
+  submittedReports WorkReport[] @relation("ReportSubmitter")
   order       Int          @default(0)
   published   Boolean      @default(true)
 }
@@ -230,8 +234,10 @@ model WorkReport {
   revisionCount   Int              @default(0)
   teamMember      TeamMember?      @relation(fields: [teamMemberId], references: [id])
   teamMemberId    String?
-  author          AdminUser        @relation("ReportAuthor", fields: [authorId], references: [id])
-  authorId        String
+  author          AdminUser?       @relation("ReportAuthor", fields: [authorId], references: [id])
+  authorId        String?
+  submittedBy     TeamMember?      @relation("ReportSubmitter", fields: [submittedById], references: [id])
+  submittedById   String?
   reviewer        AdminUser?       @relation("ReportReviewer", fields: [reviewedById], references: [id])
   reviewedById    String?
   submittedAt     DateTime?
