@@ -51,8 +51,33 @@ async function seedIfEmpty() {
 
 const PORT = env.PORT || 4000;
 
+async function ensureProjectSchema() {
+    try {
+        await prisma.$executeRawUnsafe(`
+            ALTER TABLE "Project"
+            ADD COLUMN IF NOT EXISTS "description" TEXT NOT NULL DEFAULT ''
+        `);
+        await prisma.$executeRawUnsafe(`
+            ALTER TABLE "Project"
+            ADD COLUMN IF NOT EXISTS "liveUrl" TEXT
+        `);
+        await prisma.$executeRawUnsafe(`
+            ALTER TABLE "Project"
+            ADD COLUMN IF NOT EXISTS "githubUrl" TEXT
+        `);
+        await prisma.$executeRawUnsafe(`
+            ALTER TABLE "Project"
+            ALTER COLUMN "thumbnail" DROP NOT NULL
+        `);
+        console.log('✅ Project schema check complete');
+    } catch (error) {
+        console.warn('⚠️ Project schema check failed (continuing...):', error.message);
+    }
+}
+
 async function startServer() {
     await connectWithRetry();
+    await ensureProjectSchema();
     await seedIfEmpty();
     app.listen(PORT, () => {
         console.log(`🚀 Server running in ${env.NODE_ENV} mode on http://localhost:${PORT}`);
