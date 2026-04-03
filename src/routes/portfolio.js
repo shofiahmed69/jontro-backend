@@ -189,7 +189,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
             title, slug, client, thumbnail,
             category, description, challenge, approach,
             features, techStack, results,
-            featured, published, order
+            featured, published, order, liveUrl, githubUrl
         } = req.body;
 
         const project = await prisma.project.update({
@@ -199,6 +199,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
                 ...(slug !== undefined ? { slug } : {}),
                 ...(client !== undefined ? { client } : {}),
                 ...(thumbnail !== undefined ? { thumbnail } : {}),
+                ...(liveUrl !== undefined ? { liveUrl: liveUrl || '' } : {}),
+                ...(githubUrl !== undefined ? { githubUrl: githubUrl || '' } : {}),
                 ...(category !== undefined
                     ? {
                         category: Array.isArray(category)
