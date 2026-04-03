@@ -131,7 +131,7 @@ router.post('/', authMiddleware, async (req, res) => {
     try {
         const {
             title, slug, client, thumbnail,
-            category, challenge, approach,
+            category, description, challenge, approach,
             features, techStack, results,
             featured, published, order
         } = req.body;
@@ -147,6 +147,7 @@ router.post('/', authMiddleware, async (req, res) => {
                 category: Array.isArray(category)
                     ? category
                     : (category || '').split(',').map(c => c.trim()).filter(Boolean),
+                description: description || '',
                 challenge: challenge || '',
                 approach: approach || '',
                 features: Array.isArray(features)
@@ -174,7 +175,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     try {
         const {
             title, slug, client, thumbnail,
-            category, challenge, approach,
+            category, description, challenge, approach,
             features, techStack, results,
             featured, published, order
         } = req.body;
@@ -193,6 +194,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
                             : (category || '').split(',').map(c => c.trim()).filter(Boolean)
                     }
                     : {}),
+                ...(description !== undefined ? { description } : {}),
                 ...(challenge !== undefined ? { challenge } : {}),
                 ...(approach !== undefined ? { approach } : {}),
                 ...(features !== undefined

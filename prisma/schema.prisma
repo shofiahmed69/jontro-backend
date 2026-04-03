@@ -87,6 +87,7 @@ model Project {
   liveUrl       String?
   githubUrl     String?
   category      String[]
+  description   String       @default("") @db.Text
   challenge     String       @db.Text
   approach      String       @db.Text
   features      String[]
