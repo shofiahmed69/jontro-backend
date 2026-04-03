@@ -45,14 +45,14 @@ app.get('/api/health', async (req, res) => {
         res.json({
             status: 'ok',
             database: 'connected',
-            deployedAt: "2026-04-03 19:52:00",
+            deployedAt: "2026-04-03 20:00:00",
             timestamp: new Date().toISOString()
         })
     } catch (error) {
         res.status(200).json({
             status: 'ok',
             database: 'disconnected',
-            deployedAt: "2026-04-03 19:52:00",
+            deployedAt: "2026-04-03 20:00:00",
             message: error.message,
             timestamp: new Date().toISOString()
         })
