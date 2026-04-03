@@ -1,6 +1,5 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../services/db');
 const authMiddleware = require('../middleware/auth');
 const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
@@ -128,45 +127,58 @@ router.post('/upload-image',
 
 // ADMIN - create project
 router.post('/', authMiddleware, async (req, res) => {
+    console.log('[PORTFOLIO] Attempting project creation...');
     try {
         const {
             title, slug, client, thumbnail,
             category, description, challenge, approach,
             features, techStack, results,
-            featured, published, order
+            featured, published, order, liveUrl, githubUrl
         } = req.body;
 
+        console.log('[PORTFOLIO] Received payload keys:', Object.keys(req.body));
+        console.log('[PORTFOLIO] Description received:', description?.substring(0, 20) + '...');
+
+        const projectData = {
+            title,
+            slug: slug || title.toLowerCase()
+                .replace(/\s+/g, '-')
+                .replace(/[^a-z0-9-]/g, ''),
+            client: client || '',
+            thumbnail: thumbnail || '',
+            liveUrl: liveUrl || '',
+            githubUrl: githubUrl || '',
+            category: Array.isArray(category)
+                ? category
+                : (category || '').split(',').map(c => c.trim()).filter(Boolean),
+            description: description || '',
+            challenge: challenge || '',
+            approach: approach || '',
+            features: Array.isArray(features)
+                ? features
+                : (features || '').split('\n').filter(Boolean),
+            techStack: Array.isArray(techStack)
+                ? techStack
+                : (techStack || '').split(',').map(t => t.trim()).filter(Boolean),
+            results: results || '',
+            featured: featured === true || featured === 'true',
+            published: published === true || published === 'true',
+            order: parseInt(order) || 0
+        };
+
         const project = await prisma.project.create({
-            data: {
-                title,
-                slug: slug || title.toLowerCase()
-                    .replace(/\s+/g, '-')
-                    .replace(/[^a-z0-9-]/g, ''),
-                client: client || '',
-                thumbnail: thumbnail || '',
-                category: Array.isArray(category)
-                    ? category
-                    : (category || '').split(',').map(c => c.trim()).filter(Boolean),
-                description: description || '',
-                challenge: challenge || '',
-                approach: approach || '',
-                features: Array.isArray(features)
-                    ? features
-                    : (features || '').split('\n').filter(Boolean),
-                techStack: Array.isArray(techStack)
-                    ? techStack
-                    : (techStack || '').split(',').map(t => t.trim()).filter(Boolean),
-                results: results || '',
-                featured: featured === true || featured === 'true',
-                published: published === true || published === 'true',
-                order: parseInt(order) || 0
-            }
+            data: projectData
         });
 
+        console.log('[PORTFOLIO] Project created successfully:', project.id);
         res.status(201).json({ success: true, data: project });
     } catch (error) {
-        console.error('Create project error:', error);
-        res.status(500).json({ error: error.message });
+        console.error('[PORTFOLIO] CRITICAL ERROR IN CREATE:', error.message);
+        if (error.code) console.error('[PORTFOLIO] PRISMA ERROR CODE:', error.code);
+        res.status(500).json({ 
+            error: error.message,
+            trace: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 
