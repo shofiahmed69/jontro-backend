@@ -131,7 +131,6 @@ router.post('/', authMiddleware, async (req, res) => {
     try {
         const {
             title, slug, client, thumbnail,
-            liveUrl, githubUrl,
             category, challenge, approach,
             features, techStack, results,
             featured, published, order
@@ -145,8 +144,6 @@ router.post('/', authMiddleware, async (req, res) => {
                     .replace(/[^a-z0-9-]/g, ''),
                 client: client || '',
                 thumbnail: thumbnail || '',
-                liveUrl: liveUrl || '',
-                githubUrl: githubUrl || '',
                 category: Array.isArray(category)
                     ? category
                     : (category || '').split(',').map(c => c.trim()).filter(Boolean),
@@ -175,9 +172,48 @@ router.post('/', authMiddleware, async (req, res) => {
 // ADMIN - update project
 router.put('/:id', authMiddleware, async (req, res) => {
     try {
+        const {
+            title, slug, client, thumbnail,
+            category, challenge, approach,
+            features, techStack, results,
+            featured, published, order
+        } = req.body;
+
         const project = await prisma.project.update({
             where: { id: req.params.id },
-            data: req.body
+            data: {
+                ...(title !== undefined ? { title } : {}),
+                ...(slug !== undefined ? { slug } : {}),
+                ...(client !== undefined ? { client } : {}),
+                ...(thumbnail !== undefined ? { thumbnail } : {}),
+                ...(category !== undefined
+                    ? {
+                        category: Array.isArray(category)
+                            ? category
+                            : (category || '').split(',').map(c => c.trim()).filter(Boolean)
+                    }
+                    : {}),
+                ...(challenge !== undefined ? { challenge } : {}),
+                ...(approach !== undefined ? { approach } : {}),
+                ...(features !== undefined
+                    ? {
+                        features: Array.isArray(features)
+                            ? features
+                            : (features || '').split('\n').filter(Boolean)
+                    }
+                    : {}),
+                ...(techStack !== undefined
+                    ? {
+                        techStack: Array.isArray(techStack)
+                            ? techStack
+                            : (techStack || '').split(',').map(t => t.trim()).filter(Boolean)
+                    }
+                    : {}),
+                ...(results !== undefined ? { results } : {}),
+                ...(featured !== undefined ? { featured: featured === true || featured === 'true' } : {}),
+                ...(published !== undefined ? { published: published === true || published === 'true' } : {}),
+                ...(order !== undefined ? { order: parseInt(order) || 0 } : {}),
+            }
         });
         res.json({ success: true, data: project });
     } catch (error) {
