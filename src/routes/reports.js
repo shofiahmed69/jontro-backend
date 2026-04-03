@@ -1,5 +1,7 @@
 const express = require('express');
 const { z } = require('zod');
+const { Prisma } = require('@prisma/client');
+const { randomUUID } = require('crypto');
 const prisma = require('../services/db');
 const auth = require('../middleware/auth');
 const employeeAuth = require('../middleware/employeeAuth');
@@ -100,6 +102,52 @@ function createReportTitle(periodType, memberName) {
     return `${periodType} Report · ${memberName} · ${stamp}`;
 }
 
+async function createEmployeeReportRecord(teamMember, payload) {
+    const id = randomUUID();
+    const now = new Date();
+    const submittedAt = payload.status === 'DRAFT' ? null : now;
+
+    const rows = await prisma.$queryRaw`
+        INSERT INTO "WorkReport" (
+            "id",
+            "title",
+            "periodType",
+            "status",
+            "department",
+            "teamId",
+            "accomplishments",
+            "nextSteps",
+            "blockers",
+            "blockerSeverity",
+            "teamMemberId",
+            "submittedById",
+            "submittedAt",
+            "createdAt",
+            "updatedAt"
+        )
+        VALUES (
+            ${id},
+            ${payload.title?.trim() || createReportTitle(payload.periodType, teamMember.name)},
+            ${payload.periodType}::"ReportPeriod",
+            ${payload.status}::"WorkReportStatus",
+            ${teamMember.department},
+            ${teamMember.teamId || null},
+            ${payload.accomplishments.trim()},
+            ${payload.nextSteps.trim()},
+            ${payload.blockers?.trim() || ''},
+            ${payload.blockerSeverity}::"BlockerSeverity",
+            ${teamMember.id},
+            ${teamMember.id},
+            ${submittedAt},
+            ${now},
+            ${now}
+        )
+        RETURNING "id", "title", "periodType", "status", "submittedAt", "createdAt"
+    `;
+
+    return rows[0];
+}
+
 router.get('/employee/my', employeeAuth, async (req, res, next) => {
     try {
         const [teamMember, reports] = await Promise.all([
@@ -130,24 +178,7 @@ router.post('/employee/submit', employeeAuth, async (req, res, next) => {
             return res.status(404).json({ error: 'Employee not found' });
         }
 
-        const now = new Date();
-        const report = await prisma.workReport.create({
-            data: {
-                title: payload.title?.trim() || createReportTitle(payload.periodType, teamMember.name),
-                periodType: payload.periodType,
-                status: payload.status,
-                department: teamMember.department,
-                teamId: teamMember.teamId || null,
-                accomplishments: payload.accomplishments.trim(),
-                nextSteps: payload.nextSteps.trim(),
-                blockers: payload.blockers?.trim() || '',
-                blockerSeverity: payload.blockerSeverity,
-                teamMemberId: teamMember.id,
-                submittedById: teamMember.id,
-                submittedAt: payload.status === 'DRAFT' ? null : now
-            },
-            include: reportInclude
-        });
+        const report = await createEmployeeReportRecord(teamMember, payload);
 
         res.status(201).json(report);
     } catch (error) {
