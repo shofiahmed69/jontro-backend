@@ -77,8 +77,16 @@ router.post('/employee/login', async (req, res) => {
 
         const employee = await teamMembers.getTeamMemberByWorkEmail(email);
 
-        if (!employee || !employee.employeeActive || !employee.passwordHash) {
+        if (!employee) {
             return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        if (!employee.employeeActive) {
+            return res.status(403).json({ error: 'Employee access is disabled. Contact admin.' });
+        }
+
+        if (!employee.passwordHash) {
+            return res.status(403).json({ error: 'Employee login is not configured yet. Ask admin to set your password.' });
         }
 
         const validPassword = await bcrypt.compare(password, employee.passwordHash);

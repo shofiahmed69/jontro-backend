@@ -67,6 +67,23 @@ async function buildTeamMemberData(payload, existingMember) {
     return data;
 }
 
+function validateEmployeeAccessSetup(payload, existingMember) {
+    const nextWorkEmail = payload.workEmail ? payload.workEmail.toLowerCase() : null;
+    const hasExistingPassword = Boolean(existingMember?.passwordHash);
+    const hasNewPassword = Boolean(payload.employeePassword);
+    const hadExistingEmail = Boolean(existingMember?.workEmail);
+
+    if (nextWorkEmail && !hasNewPassword && !hasExistingPassword) {
+        return 'Employee password is required when enabling employee login.';
+    }
+
+    if (!nextWorkEmail && hasNewPassword && !hadExistingEmail) {
+        return 'Employee login email is required when setting an employee password.';
+    }
+
+    return null;
+}
+
 router.get('/admin/all', auth, async (req, res, next) => {
     try {
         const team = await teamMembers.listTeamMembers();
@@ -89,6 +106,11 @@ router.get('/', async (req, res, next) => {
 // Admin routes
 router.post('/', auth, validate(teamMemberSchema), async (req, res, next) => {
     try {
+        const employeeSetupError = validateEmployeeAccessSetup(req.body);
+        if (employeeSetupError) {
+            return res.status(422).json({ error: employeeSetupError });
+        }
+
         const data = await buildTeamMemberData(req.body);
         const member = await teamMembers.createTeamMember(data);
         res.status(201).json(member);
@@ -103,6 +125,11 @@ router.put('/:id', auth, validate(teamMemberSchema), async (req, res, next) => {
 
         if (!existingMember) {
             return res.status(404).json({ error: 'Team member not found' });
+        }
+
+        const employeeSetupError = validateEmployeeAccessSetup(req.body, existingMember);
+        if (employeeSetupError) {
+            return res.status(422).json({ error: employeeSetupError });
         }
 
         const data = await buildTeamMemberData(req.body, existingMember);
