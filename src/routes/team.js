@@ -9,12 +9,25 @@ const router = express.Router();
 const teamMemberSchema = z.object({
     name: z.string().min(2),
     role: z.string(),
+    department: z.string().optional(),
+    teamId: z.string().optional(),
     bio: z.string(),
     avatar: z.string().url().optional(),
     linkedIn: z.string().url().optional(),
     twitter: z.string().url().optional(),
     order: z.number().int().optional(),
     published: z.boolean().optional(),
+});
+
+router.get('/admin/all', auth, async (req, res, next) => {
+    try {
+        const team = await prisma.teamMember.findMany({
+            orderBy: { order: 'asc' }
+        });
+        res.json(team);
+    } catch (error) {
+        next(error);
+    }
 });
 
 // Public: List team

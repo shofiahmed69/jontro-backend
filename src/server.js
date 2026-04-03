@@ -75,9 +75,94 @@ async function ensureProjectSchema() {
     }
 }
 
+async function ensureWorkStreamSchema() {
+    try {
+        await prisma.$executeRawUnsafe(`
+            DO $$ BEGIN
+                CREATE TYPE "ReportPeriod" AS ENUM ('DAILY', 'WEEKLY', 'MONTHLY');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+        `);
+        await prisma.$executeRawUnsafe(`
+            DO $$ BEGIN
+                CREATE TYPE "WorkReportStatus" AS ENUM ('DRAFT', 'SUBMITTED', 'APPROVED', 'NEEDS_REVISION');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+        `);
+        await prisma.$executeRawUnsafe(`
+            DO $$ BEGIN
+                CREATE TYPE "BlockerSeverity" AS ENUM ('NONE', 'LOW', 'MEDIUM', 'CRITICAL');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+        `);
+        await prisma.$executeRawUnsafe(`
+            ALTER TABLE "TeamMember"
+            ADD COLUMN IF NOT EXISTS "department" TEXT NOT NULL DEFAULT 'Operations'
+        `);
+        await prisma.$executeRawUnsafe(`
+            ALTER TABLE "TeamMember"
+            ADD COLUMN IF NOT EXISTS "teamId" TEXT
+        `);
+        await prisma.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS "AdminSetting" (
+                "id" TEXT NOT NULL DEFAULT 'global',
+                "dailyCutoffTime" TEXT NOT NULL DEFAULT '18:00',
+                "weeklySummaryDay" TEXT NOT NULL DEFAULT 'Friday',
+                "weeklySummaryTime" TEXT NOT NULL DEFAULT '17:00',
+                "emailNotifications" BOOLEAN NOT NULL DEFAULT true,
+                "alertRouting" BOOLEAN NOT NULL DEFAULT true,
+                "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT "AdminSetting_pkey" PRIMARY KEY ("id")
+            )
+        `);
+        await prisma.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS "WorkReport" (
+                "id" TEXT NOT NULL,
+                "title" TEXT NOT NULL,
+                "periodType" "ReportPeriod" NOT NULL,
+                "status" "WorkReportStatus" NOT NULL DEFAULT 'DRAFT',
+                "department" TEXT NOT NULL,
+                "teamId" TEXT,
+                "accomplishments" TEXT NOT NULL,
+                "nextSteps" TEXT NOT NULL,
+                "blockers" TEXT,
+                "blockerSeverity" "BlockerSeverity" NOT NULL DEFAULT 'NONE',
+                "feedback" TEXT,
+                "revisionCount" INTEGER NOT NULL DEFAULT 0,
+                "teamMemberId" TEXT,
+                "authorId" TEXT NOT NULL,
+                "reviewedById" TEXT,
+                "submittedAt" TIMESTAMP(3),
+                "reviewedAt" TIMESTAMP(3),
+                "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT "WorkReport_pkey" PRIMARY KEY ("id"),
+                CONSTRAINT "WorkReport_teamMemberId_fkey" FOREIGN KEY ("teamMemberId") REFERENCES "TeamMember"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+                CONSTRAINT "WorkReport_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "AdminUser"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+                CONSTRAINT "WorkReport_reviewedById_fkey" FOREIGN KEY ("reviewedById") REFERENCES "AdminUser"("id") ON DELETE SET NULL ON UPDATE CASCADE
+            )
+        `);
+        await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "WorkReport_status_idx" ON "WorkReport"("status")`);
+        await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "WorkReport_department_idx" ON "WorkReport"("department")`);
+        await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "WorkReport_submittedAt_idx" ON "WorkReport"("submittedAt")`);
+        await prisma.$executeRawUnsafe(`
+            INSERT INTO "AdminSetting" ("id")
+            VALUES ('global')
+            ON CONFLICT ("id") DO NOTHING
+        `);
+        console.log('✅ WorkStream schema check complete');
+    } catch (error) {
+        console.warn('⚠️ WorkStream schema check failed (continuing...):', error.message);
+    }
+}
+
 async function startServer() {
     await connectWithRetry();
     await ensureProjectSchema();
+    await ensureWorkStreamSchema();
     await seedIfEmpty();
     app.listen(PORT, () => {
         console.log(`🚀 Server running in ${env.NODE_ENV} mode on http://localhost:${PORT}`);

@@ -71,6 +71,7 @@ const teamRoutes = require('./routes/team');
 const statsRoutes = require('./routes/stats');
 const adminRoutes = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
+const reportRoutes = require('./routes/reports');
 
 // Route Registration
 app.use('/api/auth', authRoutes);
@@ -87,6 +88,7 @@ app.use('/api/team', teamRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Error Handling
 app.use((err, req, res, next) => {

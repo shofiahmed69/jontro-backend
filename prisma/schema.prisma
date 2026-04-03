@@ -31,6 +31,26 @@ enum ApplicationStatus {
   REJECTED
 }
 
+enum ReportPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum WorkReportStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  NEEDS_REVISION
+}
+
+enum BlockerSeverity {
+  NONE
+  LOW
+  MEDIUM
+  CRITICAL
+}
+
 // ── Models ─────────────────────────────────────────────────────────
 
 model Lead {
@@ -50,12 +70,14 @@ model Lead {
 }
 
 model AdminUser {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  password  String    // bcrypt hashed — never store plain text
-  name      String?
-  role      AdminRole @default(EDITOR)
-  createdAt DateTime  @default(now())
+  id             String       @id @default(uuid())
+  email          String       @unique
+  password       String       // bcrypt hashed — never store plain text
+  name           String?
+  role           AdminRole    @default(EDITOR)
+  createdAt      DateTime     @default(now())
+  reportsAuthored WorkReport[] @relation("ReportAuthor")
+  reportsReviewed WorkReport[] @relation("ReportReviewer")
 }
 
 model BlogPost {
@@ -135,16 +157,19 @@ model Testimonial {
 }
 
 model TeamMember {
-  id        String     @id @default(uuid())
-  name      String
-  role      String
-  bio       String     @db.Text
-  avatar    String?
-  linkedIn  String?
-  twitter   String?
-  blogPosts BlogPost[]
-  order     Int        @default(0)
-  published Boolean    @default(true)
+  id          String       @id @default(uuid())
+  name        String
+  role        String
+  department  String       @default("Operations")
+  teamId      String?
+  bio         String       @db.Text
+  avatar      String?
+  linkedIn    String?
+  twitter     String?
+  blogPosts   BlogPost[]
+  workReports WorkReport[]
+  order       Int          @default(0)
+  published   Boolean      @default(true)
 }
 
 model JobListing {
@@ -188,4 +213,39 @@ model Stat {
   label String // "Projects Delivered"
   value String // "50+"
   order Int    @default(0)
+}
+
+model WorkReport {
+  id              String           @id @default(uuid())
+  title           String
+  periodType      ReportPeriod
+  status          WorkReportStatus @default(DRAFT)
+  department      String
+  teamId          String?
+  accomplishments String           @db.Text
+  nextSteps       String           @db.Text
+  blockers        String?          @db.Text
+  blockerSeverity BlockerSeverity  @default(NONE)
+  feedback        String?          @db.Text
+  revisionCount   Int              @default(0)
+  teamMember      TeamMember?      @relation(fields: [teamMemberId], references: [id])
+  teamMemberId    String?
+  author          AdminUser        @relation("ReportAuthor", fields: [authorId], references: [id])
+  authorId        String
+  reviewer        AdminUser?       @relation("ReportReviewer", fields: [reviewedById], references: [id])
+  reviewedById    String?
+  submittedAt     DateTime?
+  reviewedAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model AdminSetting {
+  id                 String   @id @default("global")
+  dailyCutoffTime    String   @default("18:00")
+  weeklySummaryDay   String   @default("Friday")
+  weeklySummaryTime  String   @default("17:00")
+  emailNotifications Boolean  @default(true)
+  alertRouting       Boolean  @default(true)
+  updatedAt          DateTime @updatedAt
 }
