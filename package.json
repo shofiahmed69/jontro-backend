@@ -7,12 +7,14 @@
     "start": "npx prisma generate && node src/server.js",
     "dev": "nodemon src/server.js",
     "build": "prisma generate",
-    "test": "node --test test/**/*.test.js"
+    "test": "node --test test/**/*.test.js",
+    "mcp:admin": "node src/mcp/server.mjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@prisma/client": "^6.19.2",
     "@supabase/supabase-js": "^2.45.4",
     "axios": "^1.13.6",
