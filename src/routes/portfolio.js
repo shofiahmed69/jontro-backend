@@ -55,7 +55,7 @@ router.get('/featured', async (req, res) => {
 });
 
 // PUBLIC - get single project by slug
-router.get('/:slug', async (req, res) => {
+router.get('/:slug', async (req, res, next) => {
     try {
         // Skip admin routes
         if (req.params.slug === 'admin' || req.params.slug === 'upload-image') {
