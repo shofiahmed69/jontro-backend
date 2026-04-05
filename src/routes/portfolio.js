@@ -22,7 +22,7 @@ const upload = multer({
 });
 
 // PUBLIC - get all published projects
-router.get('/', async (req, res) => {
+router.get('/', async (req, res, next) => {
     try {
         const { category, featured } = req.query;
         const where = { published: true };
@@ -35,13 +35,12 @@ router.get('/', async (req, res) => {
         });
         res.json({ success: true, data: projects });
     } catch (error) {
-        console.error('Projects error:', error);
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 
 // PUBLIC - get featured projects for home page
-router.get('/featured', async (req, res) => {
+router.get('/featured', async (req, res, next) => {
     try {
         const projects = await prisma.project.findMany({
             where: { published: true, featured: true },
@@ -74,7 +73,7 @@ router.get('/:slug', async (req, res, next) => {
 });
 
 // ADMIN - get all projects including unpublished
-router.get('/admin/all', authMiddleware, async (req, res) => {
+router.get('/admin/all', authMiddleware, async (req, res, next) => {
     try {
         const projects = await prisma.project.findMany({
             orderBy: { createdAt: 'desc' }
