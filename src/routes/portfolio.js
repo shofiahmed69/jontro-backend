@@ -111,14 +111,11 @@ router.post('/upload-image',
                 .from(process.env.SUPABASE_BUCKET || 'jontro-uploads')
                 .getPublicUrl(fileName);
 
-            console.log('Image uploaded:', data.publicUrl);
-
             res.json({
                 success: true,
                 url: data.publicUrl
             });
         } catch (error) {
-            console.error('Image upload error:', error);
             res.status(500).json({ error: error.message });
         }
     }
@@ -126,7 +123,6 @@ router.post('/upload-image',
 
 // ADMIN - create project
 router.post('/', authMiddleware, async (req, res) => {
-    console.log('[PORTFOLIO] Attempting project creation...');
     try {
         const {
             title, slug, client, thumbnail,
@@ -134,9 +130,6 @@ router.post('/', authMiddleware, async (req, res) => {
             features, techStack, results,
             featured, published, order, liveUrl, githubUrl
         } = req.body;
-
-        console.log('[PORTFOLIO] Received payload keys:', Object.keys(req.body));
-        console.log('[PORTFOLIO] Description received:', description?.substring(0, 20) + '...');
 
         const projectData = {
             title,
@@ -168,12 +161,8 @@ router.post('/', authMiddleware, async (req, res) => {
         const project = await prisma.project.create({
             data: projectData
         });
-
-        console.log('[PORTFOLIO] Project created successfully:', project.id);
         res.status(201).json({ success: true, data: project });
     } catch (error) {
-        console.error('[PORTFOLIO] CRITICAL ERROR IN CREATE:', error.message);
-        if (error.code) console.error('[PORTFOLIO] PRISMA ERROR CODE:', error.code);
         res.status(500).json({ 
             error: error.message,
             trace: process.env.NODE_ENV === 'development' ? error.stack : undefined

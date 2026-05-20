@@ -28,7 +28,6 @@ const leadSchema = z.object({
 // Public: Submit a lead
 router.post('/', leadLimiter, async (req, res) => {
     try {
-        console.log('RAW BODY RECEIVED:', JSON.stringify(req.body, null, 2));
 
         // Create the lead FIRST, unconditionally
         const lead = await prisma.lead.create({
@@ -44,15 +43,11 @@ router.post('/', leadLimiter, async (req, res) => {
             }
         });
 
-        console.log('Lead saved unconditionally to database:', lead.id);
-
         // Email notifications (Fault-tolerant)
         try {
             await sendLeadNotification(lead);
             await sendLeadConfirmation(lead);
-            console.log('Notification emails triggered successfully');
         } catch (emailError) {
-            console.error('Email notification failed but lead was saved:', emailError.message);
         }
 
         return res.status(201).json({
@@ -61,10 +56,9 @@ router.post('/', leadLimiter, async (req, res) => {
             data: { id: lead.id }
         });
     } catch (error) {
-        console.error('CRITICAL Lead Creation Error:', error);
         return res.status(500).json({
             success: false,
-            error: error.message || 'Internal server error during lead transmission'
+            error: 'Internal server error' || 'Internal server error during lead transmission'
         });
     }
 });
@@ -98,8 +92,6 @@ router.get('/admin', auth, async (req, res, next) => {
             }),
             prisma.lead.count({ where })
         ]);
-
-        console.log('Admin leads fetched (via /admin):', leads.length);
 
         res.json({
             success: true,
@@ -144,8 +136,6 @@ router.get('/', auth, async (req, res, next) => {
             prisma.lead.count({ where })
         ]);
 
-        console.log('Admin leads fetched (via root):', leads.length);
-
         res.json({
             success: true,
             data: leads,
@@ -155,10 +145,9 @@ router.get('/', auth, async (req, res, next) => {
             totalPages: Math.ceil(total / take)
         });
     } catch (error) {
-        console.error('Get admin leads error:', error);
         res.status(500).json({
             success: false,
-            error: error.message
+            error: 'Internal server error'
         });
     }
 });
@@ -172,8 +161,7 @@ router.delete('/admin/:id', auth, async (req, res, next) => {
         });
         res.json({ success: true, message: 'Lead deleted' });
     } catch (error) {
-        console.error('Delete error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 

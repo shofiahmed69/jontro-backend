@@ -1,51 +1,39 @@
 const app = require('./app');
 const env = require('./config/env');
-console.log('DATABASE_URL being used:', process.env.DATABASE_URL?.substring(0, 50) + '...');
 const prisma = require('./services/db');
 const bcrypt = require('bcryptjs');
+const { syncAdminCredentials } = require('./services/admin-seed');
 
 async function connectWithRetry(retries = 5) {
     for (let i = 0; i < retries; i++) {
         try {
-            await prisma.$connect()
-            console.log('Database connected successfully')
-            return
+            await prisma.$connect();
+            return;
         } catch (error) {
-            console.log(`DB connection attempt ${i + 1} failed:`,
-                error.message)
             if (i < retries - 1) {
-                await new Promise(r => setTimeout(r, 5000))
+                await new Promise((r) => setTimeout(r, 5000));
             }
         }
     }
-    console.error('All DB connection attempts failed')
+    throw new Error('Database connection failed');
 }
 
-// Graceful shutdown
 process.on('beforeExit', async () => {
-    await prisma.$disconnect()
-})
+    await prisma.$disconnect();
+});
 
 async function seedIfEmpty() {
     try {
-        console.log('--- Database Seed Check ---');
-        const adminCount = await prisma.adminUser.count();
-        if (adminCount === 0) {
-            const hash = await bcrypt.hash('changeme123!', 12);
-            await prisma.adminUser.create({
-                data: {
-                    email: 'admin@jontro.com',
-                    password: hash,
-                    name: 'JONTRO Admin',
-                    role: 'SUPER_ADMIN'
-                }
-            });
-            console.log('✅ Admin user seeded automatically');
-        } else {
-            console.log('ℹ️ Admin user already exists, skipping seed');
-        }
+        await syncAdminCredentials({
+            prisma,
+            bcrypt,
+            email: env.ADMIN_EMAIL,
+            password: env.ADMIN_PASSWORD,
+            name: 'JONTRO Admin',
+            role: 'SUPER_ADMIN'
+        });
     } catch (error) {
-        console.warn('⚠️ Seed check encountered an error (continuing...):', error.message);
+        // Continue startup if admin sync fails.
     }
 }
 
@@ -69,9 +57,8 @@ async function ensureProjectSchema() {
             ALTER TABLE "Project"
             ALTER COLUMN "thumbnail" DROP NOT NULL
         `);
-        console.log('✅ Project schema check complete');
     } catch (error) {
-        console.warn('⚠️ Project schema check failed (continuing...):', error.message);
+        // Continue startup; migrations should own schema in steady state.
     }
 }
 
@@ -188,20 +175,21 @@ async function ensureWorkStreamSchema() {
             VALUES ('global')
             ON CONFLICT ("id") DO NOTHING
         `);
-        console.log('✅ WorkStream schema check complete');
     } catch (error) {
-        console.warn('⚠️ WorkStream schema check failed (continuing...):', error.message);
+        // Continue startup; migrations should own schema in steady state.
     }
 }
 
 async function startServer() {
-    await connectWithRetry();
-    await ensureProjectSchema();
-    await ensureWorkStreamSchema();
-    await seedIfEmpty();
-    app.listen(PORT, () => {
-        console.log(`🚀 Server running in ${env.NODE_ENV} mode on http://localhost:${PORT}`);
-    });
+    try {
+        await connectWithRetry();
+        await ensureProjectSchema();
+        await ensureWorkStreamSchema();
+        await seedIfEmpty();
+        app.listen(PORT);
+    } catch (error) {
+        process.exit(1);
+    }
 }
 
 startServer();

@@ -1,23 +1,21 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+require('dotenv').config();
+const { syncAdminCredentials } = require('../src/services/admin-seed');
 
 const prisma = new PrismaClient();
 
 async function main() {
-    const password = await bcrypt.hash('admin123', 10);
-
-    const admin = await prisma.adminUser.upsert({
-        where: { email: 'admin@jontro.com' },
-        update: {},
-        create: {
-            email: 'admin@jontro.com',
-            password: await bcrypt.hash('changeme123!', 12),
-            name: 'JONTRO Admin',
-            role: 'SUPER_ADMIN'
-        }
+    const { admin, action } = await syncAdminCredentials({
+        prisma,
+        bcrypt,
+        email: process.env.ADMIN_EMAIL,
+        password: process.env.ADMIN_PASSWORD,
+        name: 'JONTRO Admin',
+        role: 'SUPER_ADMIN'
     });
 
-    console.log('✅ Seed successful! Admin user created:', admin.email);
+    console.log(`✅ Seed successful! Admin user ${action}:`, admin.email);
 
     // Seed Projects
     const existingProjects = await prisma.project.count()

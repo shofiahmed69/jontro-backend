@@ -11,29 +11,16 @@ const router = express.Router();
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-        console.log('Login attempt for:', email);
-        console.log('JWT_SECRET for signing:', !!process.env.JWT_SECRET);
 
-        const admin = await prisma.adminUser.findUnique({
-            where: { email }
-        });
+        const admin = await prisma.adminUser.findUnique({ where: { email } });
 
         if (!admin) {
-            console.log('Admin not found:', email);
-            return res.status(401).json({
-                error: 'Invalid credentials'
-            });
+            return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const validPassword = await bcrypt.compare(
-            password, admin.password
-        );
-
+        const validPassword = await bcrypt.compare(password, admin.password);
         if (!validPassword) {
-            console.log('Wrong password for:', email);
-            return res.status(401).json({
-                error: 'Invalid credentials'
-            });
+            return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         const token = jwt.sign(
@@ -47,9 +34,6 @@ router.post('/login', async (req, res) => {
             { expiresIn: '7d' }
         );
 
-        console.log('Token signed successfully for:', email);
-        console.log('Token preview:', token.substring(0, 30));
-
         res.json({
             success: true,
             token,
@@ -61,8 +45,7 @@ router.post('/login', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Login route error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Login failed' });
     }
 });
 
@@ -90,7 +73,6 @@ router.post('/employee/login', async (req, res) => {
         }
 
         const validPassword = await bcrypt.compare(password, employee.passwordHash);
-
         if (!validPassword) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
@@ -120,8 +102,7 @@ router.post('/employee/login', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Employee login route error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Employee login failed' });
     }
 });
 

@@ -14,7 +14,6 @@ async function uploadFile(fileBuffer, fileName, mimeType, folder = 'uploads') {
         });
 
     if (error) {
-        console.error('Supabase upload error:', error);
         throw new Error('Failed to upload file');
     }
 

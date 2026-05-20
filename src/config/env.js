@@ -17,13 +17,12 @@ const envSchema = z.object({
     SUPABASE_URL: z.string().url(),
     SUPABASE_SERVICE_KEY: z.string(),
     SUPABASE_BUCKET: z.string().default('jontro-uploads'),
-    FRONTEND_URL: z.string().url().default('http://localhost:3000'),
+    FRONTEND_URL: z.string().url().default('http://localhost:3000')
 });
 
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-    console.error('❌ Invalid environment variables:', parsed.error.flatten().fieldErrors);
     throw new Error('Invalid environment variables');
 }
 

@@ -92,7 +92,6 @@ async function safeFindReports(where = {}) {
             orderBy: [{ submittedAt: 'desc' }, { createdAt: 'desc' }]
         });
     } catch (error) {
-        console.warn('WorkReport query fallback triggered:', error.message);
         return [];
     }
 }

@@ -4,8 +4,6 @@ const env = require('../config/env');
 async function sendEmail({ to, subject, html }) {
   // Guard
   if (!env.EMAIL_PASS || env.EMAIL_PASS === 'placeholder') {
-    console.log('📧 Email service skipped: EMAIL_PASS is missing or placeholder.');
-    console.log(`Target: ${to}, Subject: ${subject}`);
     return;
   }
 
@@ -27,7 +25,6 @@ async function sendEmail({ to, subject, html }) {
       html,
     });
   } catch (error) {
-    console.error('❌ Failed to send email:', error);
   }
 }
 
@@ -88,7 +85,6 @@ async function sendLeadNotification(lead) {
       html,
     });
   } catch (error) {
-    console.error('Email failed but lead saved (sendLeadNotification):', error.message);
   }
 }
 
@@ -135,7 +131,6 @@ async function sendLeadConfirmation(lead) {
       html,
     });
   } catch (error) {
-    console.error('Email failed but lead saved (sendLeadConfirmation):', error.message);
   }
 }
 
