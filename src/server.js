@@ -150,6 +150,30 @@ async function ensureProjectSchema() {
     }
 }
 
+async function ensureServicePricingSchema() {
+    try {
+        await prisma.$executeRawUnsafe(`
+            ALTER TABLE "Service"
+            ADD COLUMN IF NOT EXISTS "priceMinUsd" INTEGER,
+            ADD COLUMN IF NOT EXISTS "priceMaxUsd" INTEGER,
+            ADD COLUMN IF NOT EXISTS "priceMinEur" INTEGER,
+            ADD COLUMN IF NOT EXISTS "priceMaxEur" INTEGER,
+            ADD COLUMN IF NOT EXISTS "priceMinBdt" INTEGER,
+            ADD COLUMN IF NOT EXISTS "priceMaxBdt" INTEGER
+        `);
+
+        await prisma.$executeRawUnsafe(`
+            UPDATE "Service"
+            SET
+                "priceMinUsd" = COALESCE("priceMinUsd", "priceMin"),
+                "priceMaxUsd" = COALESCE("priceMaxUsd", "priceMax")
+            WHERE "priceMinUsd" IS NULL OR "priceMaxUsd" IS NULL
+        `);
+    } catch (error) {
+        // Continue startup; migrations should own schema in steady state.
+    }
+}
+
 async function ensureWorkStreamSchema() {
     try {
         await prisma.$executeRawUnsafe(`
@@ -272,6 +296,7 @@ async function startServer() {
     try {
         await connectWithRetry();
         await ensureProjectSchema();
+        await ensureServicePricingSchema();
         await ensureWorkStreamSchema();
         await seedIfEmpty();
         app.listen(PORT);
