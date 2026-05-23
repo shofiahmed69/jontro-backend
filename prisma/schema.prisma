@@ -129,6 +129,9 @@ model Service {
   title          String
   slug           String   @unique
   icon           String?
+  image          String?
+  banner         String?
+  demoUrl        String?
   description    String   @db.Text
   features       String[]
   industries     String[]
@@ -142,6 +145,8 @@ model Service {
   seoDescription String?
   order          Int      @default(0)
   published      Boolean  @default(true)
+  priceMin       Int?
+  priceMax       Int?
 }
 
 model Testimonial {

@@ -32,8 +32,96 @@ async function seedIfEmpty() {
             name: 'JONTRO Admin',
             role: 'SUPER_ADMIN'
         });
+
+        // Seed default client-side services if the table is empty
+        const servicesCount = await prisma.service.count();
+        if (servicesCount === 0) {
+            await prisma.service.createMany({
+                data: [
+                    {
+                        title: "Custom Software Development",
+                        slug: "custom-software-development",
+                        description: "Business systems, internal tools, and client platforms built to scale cleanly.",
+                        icon: "code",
+                        features: ["UI/UX Design", "Responsive Frontend", "Core REST APIs"],
+                        techStack: ["React", "Next.js"],
+                        pricingTiers: ["starter"],
+                        priceMin: 5000,
+                        priceMax: 15000,
+                        order: 1,
+                        published: true
+                    },
+                    {
+                        title: "AI Agent Development",
+                        slug: "ai-agent-development",
+                        description: "Custom virtual assistants, data extraction tools, and decision-support systems.",
+                        icon: "spark",
+                        features: ["Custom AI Models", "Search Systems", "AI Chat Integration"],
+                        techStack: ["Python", "OpenAI"],
+                        pricingTiers: ["growth"],
+                        priceMin: 15000,
+                        priceMax: 30000,
+                        order: 2,
+                        published: true
+                    },
+                    {
+                        title: "Workflow Automation",
+                        slug: "workflow-automation",
+                        description: "Automatic data transfer and task synchronization across your business software.",
+                        icon: "flow",
+                        features: ["System Integration", "Automatic Alerts", "Data Syncing"],
+                        techStack: ["Make.com", "n8n"],
+                        pricingTiers: ["starter", "growth"],
+                        priceMin: 4000,
+                        priceMax: 10000,
+                        order: 3,
+                        published: true
+                    },
+                    {
+                        title: "SaaS Product Development",
+                        slug: "saas-product-development",
+                        description: "Subscription-based web applications with user dashboards and automated billing.",
+                        icon: "stack",
+                        features: ["Secure Login", "Subscription Billing", "User Dashboards"],
+                        techStack: ["Next.js", "Stripe"],
+                        pricingTiers: ["growth", "enterprise"],
+                        priceMin: 20000,
+                        priceMax: 50000,
+                        order: 4,
+                        published: true
+                    },
+                    {
+                        title: "Mobile App Development",
+                        slug: "mobile-app-development",
+                        description: "Bespoke mobile applications for iOS and Android with offline capability.",
+                        icon: "mobile",
+                        features: ["iOS & Android Apps", "Offline Support", "Push Notifications"],
+                        techStack: ["React Native", "Expo"],
+                        pricingTiers: ["growth"],
+                        priceMin: 12000,
+                        priceMax: 25000,
+                        order: 5,
+                        published: true
+                    },
+                    {
+                        title: "Cloud & API Systems",
+                        slug: "cloud-api-systems",
+                        description: "Secure backend databases and custom APIs connecting your platforms and external services.",
+                        icon: "cloud",
+                        features: ["Cloud Hosting", "Custom APIs", "Secure Databases"],
+                        techStack: ["AWS", "Docker"],
+                        pricingTiers: ["enterprise"],
+                        priceMin: 25000,
+                        priceMax: 60000,
+                        order: 6,
+                        published: true
+                    }
+                ]
+            });
+            console.log('✅ Seeding of default client-side services successful!');
+        }
     } catch (error) {
-        // Continue startup if admin sync fails.
+        console.error('Failed to seed services:', error);
     }
 }
 
@@ -171,8 +259,8 @@ async function ensureWorkStreamSchema() {
         await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "WorkReport_submittedAt_idx" ON "WorkReport"("submittedAt")`);
         await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "WorkReport_submittedById_idx" ON "WorkReport"("submittedById")`);
         await prisma.$executeRawUnsafe(`
-            INSERT INTO "AdminSetting" ("id")
-            VALUES ('global')
+            INSERT INTO "AdminSetting" ("id", "updatedAt")
+            VALUES ('global', NOW())
             ON CONFLICT ("id") DO NOTHING
         `);
     } catch (error) {

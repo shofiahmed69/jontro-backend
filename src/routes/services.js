@@ -10,7 +10,10 @@ const router = express.Router();
 const serviceSchema = z.object({
     title: z.string().min(2),
     slug: z.string().optional(),
-    icon: z.string().optional(),
+    icon: z.string().optional().nullable(),
+    image: z.string().optional().nullable(),
+    banner: z.string().optional().nullable(),
+    demoUrl: z.string().optional().nullable(),
     description: z.string(),
     features: z.array(z.string()).optional(),
     industries: z.array(z.string()).optional(),
@@ -24,6 +27,8 @@ const serviceSchema = z.object({
     seoDescription: z.string().optional(),
     order: z.number().int().optional(),
     published: z.boolean().optional(),
+    priceMin: z.number().int().optional().nullable(),
+    priceMax: z.number().int().optional().nullable(),
 });
 
 // Public: List services
@@ -31,6 +36,18 @@ router.get('/', async (req, res, next) => {
     try {
         const services = await prisma.service.findMany({
             where: { published: true },
+            orderBy: { order: 'asc' }
+        });
+        res.json(services);
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Admin: List all services (including unpublished)
+router.get('/admin/all', auth, async (req, res, next) => {
+    try {
+        const services = await prisma.service.findMany({
             orderBy: { order: 'asc' }
         });
         res.json(services);
