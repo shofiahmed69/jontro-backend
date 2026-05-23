@@ -14,7 +14,7 @@ const authLimiter = rateLimit({
 
 const leadLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 5,
+    max: 120,
     message: { error: 'Too many contact form submissions, try again later' }
 });
 
