@@ -7,6 +7,47 @@ const { generateSlug } = require('../services/slugService');
 
 const router = express.Router();
 
+const legacySelect = {
+    id: true,
+    title: true,
+    slug: true,
+    icon: true,
+    image: true,
+    banner: true,
+    demoUrl: true,
+    description: true,
+    features: true,
+    industries: true,
+    deliverables: true,
+    process: true,
+    useCases: true,
+    techStack: true,
+    pricingTiers: true,
+    faq: true,
+    seoTitle: true,
+    seoDescription: true,
+    order: true,
+    published: true,
+    priceMin: true,
+    priceMax: true,
+};
+
+async function listServicesSafe(where = {}) {
+    try {
+        return await prisma.service.findMany({
+            where,
+            orderBy: { order: 'asc' }
+        });
+    } catch (error) {
+        // Compatibility fallback when DB schema lags code (e.g. missing new columns).
+        return prisma.service.findMany({
+            where,
+            orderBy: { order: 'asc' },
+            select: legacySelect
+        });
+    }
+}
+
 const serviceSchema = z.object({
     title: z.string().min(2),
     slug: z.string().optional(),
@@ -40,10 +81,7 @@ const serviceSchema = z.object({
 // Public: List services
 router.get('/', async (req, res, next) => {
     try {
-        const services = await prisma.service.findMany({
-            where: { published: true },
-            orderBy: { order: 'asc' }
-        });
+        const services = await listServicesSafe({ published: true });
         res.json(services);
     } catch (error) {
         next(error);
@@ -53,9 +91,7 @@ router.get('/', async (req, res, next) => {
 // Admin: List all services (including unpublished)
 router.get('/admin/all', auth, async (req, res, next) => {
     try {
-        const services = await prisma.service.findMany({
-            orderBy: { order: 'asc' }
-        });
+        const services = await listServicesSafe();
         res.json(services);
     } catch (error) {
         next(error);
@@ -65,9 +101,17 @@ router.get('/admin/all', auth, async (req, res, next) => {
 // Public: Get service by slug
 router.get('/:slug', async (req, res, next) => {
     try {
-        const service = await prisma.service.findUnique({
-            where: { slug: req.params.slug, published: true }
-        });
+        let service = null;
+        try {
+            service = await prisma.service.findFirst({
+                where: { slug: req.params.slug, published: true }
+            });
+        } catch {
+            service = await prisma.service.findFirst({
+                where: { slug: req.params.slug, published: true },
+                select: legacySelect
+            });
+        }
         if (!service) return res.status(404).json({ error: 'Service not found' });
         res.json(service);
     } catch (error) {
