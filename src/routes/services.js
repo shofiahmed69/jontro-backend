@@ -29,6 +29,12 @@ const serviceSchema = z.object({
     published: z.boolean().optional(),
     priceMin: z.number().int().optional().nullable(),
     priceMax: z.number().int().optional().nullable(),
+    priceMinUsd: z.number().int().optional().nullable(),
+    priceMaxUsd: z.number().int().optional().nullable(),
+    priceMinEur: z.number().int().optional().nullable(),
+    priceMaxEur: z.number().int().optional().nullable(),
+    priceMinBdt: z.number().int().optional().nullable(),
+    priceMaxBdt: z.number().int().optional().nullable(),
 });
 
 // Public: List services

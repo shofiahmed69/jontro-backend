@@ -147,6 +147,12 @@ model Service {
   published      Boolean  @default(true)
   priceMin       Int?
   priceMax       Int?
+  priceMinUsd    Int?
+  priceMaxUsd    Int?
+  priceMinEur    Int?
+  priceMaxEur    Int?
+  priceMinBdt    Int?
+  priceMaxBdt    Int?
 }
 
 model Testimonial {
