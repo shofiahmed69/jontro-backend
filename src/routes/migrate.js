@@ -86,7 +86,8 @@ router.post('/run', async (req, res) => {
             errors: 0
         };
 
-        // 1. Migrate JobApplications (resumeUrl)
+        // 1. Migrate JobApplications (resumeUrl) - SKIPPED AS PER USER REQUEST
+        /*
         const apps = await prisma.jobApplication.findMany({
             where: { resumeUrl: { contains: 'supabase.co' } }
         });
@@ -103,6 +104,8 @@ router.post('/run', async (req, res) => {
                 stats.errors++;
             }
         }
+        */
+
 
         // 2. Migrate Projects (thumbnail)
         const projects = await prisma.project.findMany({
