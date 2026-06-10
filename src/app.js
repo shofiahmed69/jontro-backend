@@ -69,6 +69,7 @@ const statsRoutes = require('./routes/stats');
 const adminRoutes = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
 const reportRoutes = require('./routes/reports');
+const migrateRoutes = require('./routes/migrate');
 const auth = require('./middleware/auth');
 
 app.use('/api/auth', authRoutes);
@@ -85,6 +86,8 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/migrate', migrateRoutes);
+
 
 app.use((err, req, res, next) => {
     const status = err.status || 500;
