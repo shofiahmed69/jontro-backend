@@ -220,4 +220,72 @@ router.post('/run', async (req, res) => {
     }
 });
 
+// Endpoint to restore services from db-backup.json and migrate their images
+router.post('/services', async (req, res) => {
+    const { token } = req.body;
+    if (token !== 'migration-secret-123') {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+        const backupPath = path.join(__dirname, '../../prisma/db-backup.json');
+        if (!fs.existsSync(backupPath)) {
+            return res.status(404).json({ error: 'db-backup.json not found in container' });
+        }
+
+        const backupData = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
+        const servicesRecords = backupData.Service || [];
+
+        if (servicesRecords.length === 0) {
+            return res.status(400).json({ error: 'No Service records found in backup' });
+        }
+
+        console.log(`Cleaning Service table and restoring ${servicesRecords.length} records...`);
+        await prisma.service.deleteMany();
+
+        // Restore services
+        await prisma.service.createMany({
+            data: servicesRecords
+        });
+
+        // Now migrate their images and banners
+        const services = await prisma.service.findMany({});
+        let migratedCount = 0;
+
+        for (const service of services) {
+            let updated = false;
+            const updateData = {};
+
+            if (service.image && service.image.includes('supabase.co')) {
+                const newUrl = await migrateFileUrl(service.image);
+                if (newUrl !== service.image) {
+                    updateData.image = newUrl;
+                    updated = true;
+                }
+            }
+            if (service.banner && service.banner.includes('supabase.co')) {
+                const newUrl = await migrateFileUrl(service.banner);
+                if (newUrl !== service.banner) {
+                    updateData.banner = newUrl;
+                    updated = true;
+                }
+            }
+
+            if (updated) {
+                await prisma.service.update({
+                    where: { id: service.id },
+                    data: updateData
+                });
+                migratedCount++;
+            }
+        }
+
+        res.json({ message: 'Services restored and migrated successfully', count: servicesRecords.length, migratedImages: migratedCount });
+    } catch (error) {
+        console.error('Error restoring services:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;
+
