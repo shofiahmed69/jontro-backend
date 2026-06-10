@@ -32,6 +32,8 @@ app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json());
 app.use(globalLimiter);
 
+app.use('/uploads', express.static('/app/uploads'));
+
 const prisma = require('./services/db');
 
 app.get('/api/health', async (req, res) => {
