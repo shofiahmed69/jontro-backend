@@ -5,10 +5,11 @@ const prisma = require('../services/db');
 const teamMembers = require('../services/team-members');
 const auth = require('../middleware/auth');
 const employeeAuth = require('../middleware/employeeAuth');
+const { authLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
 
@@ -49,7 +50,7 @@ router.post('/login', async (req, res) => {
     }
 });
 
-router.post('/employee/login', async (req, res) => {
+router.post('/employee/login', authLimiter, async (req, res) => {
     try {
         const email = req.body?.email?.trim().toLowerCase();
         const password = req.body?.password;

@@ -7,6 +7,7 @@
     "start": "npx prisma generate && node src/server.js",
     "dev": "nodemon src/server.js",
     "build": "prisma generate",
+    "postinstall": "prisma generate",
     "test": "node --test test/**/*.test.js",
     "mcp:admin": "node src/mcp/server.mjs"
   },
