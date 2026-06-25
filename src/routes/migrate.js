@@ -228,17 +228,21 @@ router.post('/services', async (req, res) => {
     }
 
     try {
-        const backupPath = path.join(__dirname, '../../prisma/db-backup.json');
-        if (!fs.existsSync(backupPath)) {
-            return res.status(404).json({ error: 'db-backup.json not found in container' });
+        let servicesRecords = req.body.services || [];
+        
+        if (servicesRecords.length === 0) {
+            const backupPath = path.join(__dirname, '../../prisma/db-backup.json');
+            if (!fs.existsSync(backupPath)) {
+                return res.status(404).json({ error: 'db-backup.json not found and no services provided in body' });
+            }
+            const backupData = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
+            servicesRecords = backupData.Service || [];
         }
-
-        const backupData = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
-        const servicesRecords = backupData.Service || [];
 
         if (servicesRecords.length === 0) {
-            return res.status(400).json({ error: 'No Service records found in backup' });
+            return res.status(400).json({ error: 'No Service records found to restore' });
         }
+
 
         console.log(`Cleaning Service table and restoring ${servicesRecords.length} records...`);
         await prisma.service.deleteMany();

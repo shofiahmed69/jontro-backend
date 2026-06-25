@@ -266,3 +266,22 @@ model AdminSetting {
   alertRouting       Boolean  @default(true)
   updatedAt          DateTime @updatedAt
 }
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+model Transaction {
+  id          String          @id @default(uuid())
+  title       String
+  amount      Float
+  type        TransactionType
+  category    String
+  reference   String?
+  note        String?         @db.Text
+  date        DateTime        @default(now())
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
