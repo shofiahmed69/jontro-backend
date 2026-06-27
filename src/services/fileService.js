@@ -2,8 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const env = require('../config/env');
 
-// Use /app/uploads in production, local fallback in dev
-const UPLOADS_DIR = env.NODE_ENV === 'production' ? '/app/uploads' : path.join(__dirname, '../../uploads');
+// Use relative uploads directory in project working directory
+const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
 
 // Ensure directories exist
 if (!fs.existsSync(UPLOADS_DIR)) {

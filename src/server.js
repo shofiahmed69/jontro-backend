@@ -294,13 +294,18 @@ async function ensureWorkStreamSchema() {
 
 async function startServer() {
     try {
+        console.log('Starting server initialization...');
         await connectWithRetry();
+        console.log('Connected to database successfully.');
         await ensureProjectSchema();
         await ensureServicePricingSchema();
         await ensureWorkStreamSchema();
         await seedIfEmpty();
-        app.listen(PORT);
+        app.listen(PORT, () => {
+            console.log(`Server listening on port ${PORT}`);
+        });
     } catch (error) {
+        console.error('Fatal startup error:', error);
         process.exit(1);
     }
 }
