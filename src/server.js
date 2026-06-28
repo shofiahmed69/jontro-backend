@@ -3,6 +3,7 @@ const env = require('./config/env');
 const prisma = require('./services/db');
 const bcrypt = require('bcryptjs');
 const { syncAdminCredentials } = require('./services/admin-seed');
+const { seedPrices } = require('./services/seed-prices');
 
 async function connectWithRetry(retries = 5) {
     for (let i = 0; i < retries; i++) {
@@ -301,6 +302,7 @@ async function startServer() {
         await ensureServicePricingSchema();
         await ensureWorkStreamSchema();
         await seedIfEmpty();
+        await seedPrices();
         app.listen(PORT, () => {
             console.log(`Server listening on port ${PORT}`);
         });
