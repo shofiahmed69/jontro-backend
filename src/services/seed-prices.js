@@ -3,69 +3,69 @@ const prisma = require('./db');
 const pricingData = [
     {
         slug: "custom-software-development",
-        priceMinUsd: 5000,
-        priceMaxUsd: 25000,
-        priceMinEur: 4500,
-        priceMaxEur: 23000,
-        priceMinBdt: 500000,
-        priceMaxBdt: 2500000,
-        priceMin: 5000,
-        priceMax: 25000
+        priceMinUsd: 290,
+        priceMaxUsd: 1450,
+        priceMinEur: 270,
+        priceMaxEur: 1350,
+        priceMinBdt: 30000,
+        priceMaxBdt: 150000,
+        priceMin: 290,
+        priceMax: 1450
     },
     {
         slug: "ai-agent-development",
-        priceMinUsd: 8000,
-        priceMaxUsd: 35000,
-        priceMinEur: 7500,
-        priceMaxEur: 32000,
-        priceMinBdt: 800000,
-        priceMaxBdt: 3500000,
-        priceMin: 8000,
-        priceMax: 35000
+        priceMinUsd: 390,
+        priceMaxUsd: 2450,
+        priceMinEur: 360,
+        priceMaxEur: 2250,
+        priceMinBdt: 40000,
+        priceMaxBdt: 250000,
+        priceMin: 390,
+        priceMax: 2450
     },
     {
         slug: "workflow-automation",
-        priceMinUsd: 3000,
-        priceMaxUsd: 12000,
-        priceMinEur: 2800,
-        priceMaxEur: 11000,
-        priceMinBdt: 300000,
-        priceMaxBdt: 1200000,
-        priceMin: 3000,
-        priceMax: 12000
+        priceMinUsd: 149,
+        priceMaxUsd: 790,
+        priceMinEur: 135,
+        priceMaxEur: 730,
+        priceMinBdt: 15000,
+        priceMaxBdt: 80000,
+        priceMin: 149,
+        priceMax: 790
     },
     {
         slug: "saas-product-development",
-        priceMinUsd: 15000,
-        priceMaxUsd: 60000,
-        priceMinEur: 14000,
-        priceMaxEur: 55000,
-        priceMinBdt: 1500000,
-        priceMaxBdt: 6000000,
-        priceMin: 15000,
-        priceMax: 60000
+        priceMinUsd: 790,
+        priceMaxUsd: 4450,
+        priceMinEur: 730,
+        priceMaxEur: 4150,
+        priceMinBdt: 80000,
+        priceMaxBdt: 450000,
+        priceMin: 790,
+        priceMax: 4450
     },
     {
         slug: "mobile-app-development",
-        priceMinUsd: 10000,
-        priceMaxUsd: 30000,
-        priceMinEur: 9000,
-        priceMaxEur: 28000,
-        priceMinBdt: 1000000,
-        priceMaxBdt: 3000000,
-        priceMin: 10000,
-        priceMax: 30000
+        priceMinUsd: 590,
+        priceMaxUsd: 3450,
+        priceMinEur: 550,
+        priceMaxEur: 3200,
+        priceMinBdt: 60000,
+        priceMaxBdt: 350000,
+        priceMin: 590,
+        priceMax: 3450
     },
     {
         slug: "cloud-api-systems",
-        priceMinUsd: 6000,
-        priceMaxUsd: 20000,
-        priceMinEur: 5500,
-        priceMaxEur: 18000,
-        priceMinBdt: 600000,
-        priceMaxBdt: 2000000,
-        priceMin: 6000,
-        priceMax: 20000
+        priceMinUsd: 249,
+        priceMaxUsd: 1190,
+        priceMinEur: 230,
+        priceMaxEur: 1100,
+        priceMinBdt: 25000,
+        priceMaxBdt: 120000,
+        priceMin: 249,
+        priceMax: 1190
     }
 ];
 
