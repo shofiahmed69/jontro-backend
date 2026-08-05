@@ -71,6 +71,7 @@ const reportRoutes = require('./routes/reports');
 const migrateRoutes = require('./routes/migrate');
 const financeRoutes = require('./routes/finance');
 const invoiceRoutes = require('./routes/invoices');
+const uploadRoutes = require('./routes/upload');
 const auth = require('./middleware/auth');
 
 app.use('/api/auth', authRoutes);
