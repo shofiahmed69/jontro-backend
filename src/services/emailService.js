@@ -20,8 +20,12 @@ async function sendEmail({ to, subject, html, from, replyTo }) {
       if (replyTo) {
         payload.replyTo = replyTo;
       }
-      const data = await resend.emails.send(payload);
-      return data;
+      const { data, error } = await resend.emails.send(payload);
+      if (error) {
+        console.error('[Resend API Error]:', error);
+      } else {
+        return data;
+      }
     } catch (resendError) {
       console.error('[Resend Email Error]:', resendError);
       // Continue to fallback
@@ -234,7 +238,7 @@ async function sendApplicationConfirmation(application, jobTitle) {
 
     const roleName = jobTitle || 'Career Opportunity';
 
-    await sendEmail({
+    return await sendEmail({
       to: application.email,
       from: env.RESEND_FROM || 'JantraSoft Careers <careers@jantrasoft.online>',
       replyTo: 'careers@jantrasoft.online',
