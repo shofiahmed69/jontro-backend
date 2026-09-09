@@ -75,7 +75,7 @@ router.post('/:id/apply', upload.single('resume'), async (req, res, next) => {
 
         // Email notifications
         sendApplicationNotification(application, jobTitle).catch(console.error);
-        sendApplicationConfirmation(application).catch(console.error);
+        sendApplicationConfirmation(application, jobTitle).catch(console.error);
 
         res.status(201).json(application);
     } catch (error) {

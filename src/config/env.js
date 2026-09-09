@@ -17,7 +17,9 @@ const envSchema = z.object({
     SUPABASE_URL: z.string().url(),
     SUPABASE_SERVICE_KEY: z.string(),
     SUPABASE_BUCKET: z.string().default('jontro-uploads'),
-    FRONTEND_URL: z.string().url().default('http://localhost:3000')
+    FRONTEND_URL: z.string().url().default('http://localhost:3000'),
+    RESEND_API_KEY: z.string().optional(),
+    RESEND_FROM: z.string().default('JantraSoft Careers <careers@jantrasoft.online>')
 });
 
 const parsed = envSchema.safeParse(process.env);

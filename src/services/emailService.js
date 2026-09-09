@@ -1,8 +1,34 @@
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const env = require('../config/env');
+const { getCareerConfirmationHtml } = require('../templates/careerConfirmationEmail');
 
-async function sendEmail({ to, subject, html }) {
-  // Guard
+const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
+
+async function sendEmail({ to, subject, html, from, replyTo }) {
+  // Try Resend first if API key is provided
+  if (resend) {
+    try {
+      const sender = from || env.RESEND_FROM || 'JantraSoft Careers <careers@jantrasoft.online>';
+      const recipients = Array.isArray(to) ? to : [to];
+      const payload = {
+        from: sender,
+        to: recipients,
+        subject,
+        html,
+      };
+      if (replyTo) {
+        payload.replyTo = replyTo;
+      }
+      const data = await resend.emails.send(payload);
+      return data;
+    } catch (resendError) {
+      console.error('[Resend Email Error]:', resendError);
+      // Continue to fallback
+    }
+  }
+
+  // Guard for Nodemailer fallback
   if (!env.EMAIL_PASS || env.EMAIL_PASS === 'placeholder') {
     return;
   }
@@ -19,12 +45,14 @@ async function sendEmail({ to, subject, html }) {
 
   try {
     await transporter.sendMail({
-      from: `"${env.EMAIL_FROM}" <${env.EMAIL_USER}>`,
+      from: from || `"${env.EMAIL_FROM}" <${env.EMAIL_USER}>`,
       to,
       subject,
       html,
+      replyTo: replyTo || undefined,
     });
   } catch (error) {
+    console.error('[Nodemailer Email Error]:', error);
   }
 }
 
@@ -98,7 +126,7 @@ async function sendLeadConfirmation(lead) {
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ff6b00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
           </div>
           <h1 style="color: #ffffff; margin: 0; font-size: 28px; letter-spacing: -0.5px;">Hello ${firstName}!</h1>
-          <p style="color: #94a3b8; margin: 10px 0 0; font-size: 16px;">We've received your signal at JONTRO.</p>
+          <p style="color: #94a3b8; margin: 10px 0 0; font-size: 16px;">We've received your project inquiry at JantraSoft.</p>
         </div>
         
         <div style="background-color: #1e293b; padding: 30px; border-radius: 20px; margin-bottom: 30px; border: 1px solid #334155;">
@@ -120,7 +148,7 @@ async function sendLeadConfirmation(lead) {
 
         <div style="text-align: center; border-top: 1px solid #1e293b; pt-30px;">
           <p style="color: #64748b; font-size: 14px; margin-bottom: 0;">Best regards,</p>
-          <p style="color: #ffffff; font-size: 16px; font-weight: bold; margin-top: 5px;">The JONTRO Team</p>
+          <p style="color: #ffffff; font-size: 16px; font-weight: bold; margin-top: 5px;">The JantraSoft Team</p>
         </div>
       </div>
     `;
@@ -136,45 +164,86 @@ async function sendLeadConfirmation(lead) {
 
 async function sendApplicationNotification(application, jobTitle) {
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-      <h2 style="color: #333;">New Job Application</h2>
-      <p style="font-size: 16px;"><strong>Position:</strong> ${jobTitle}</p>
-      <p style="font-size: 16px;"><strong>Applicant:</strong> ${application.name}</p>
-      <p style="font-size: 16px;"><strong>Email:</strong> ${application.email}</p>
-      <p style="font-size: 16px;"><strong>Phone:</strong> ${application.phone || 'N/A'}</p>
-      <p style="font-size: 16px;"><strong>Resume:</strong> <a href="${application.resumeUrl}">Download Resume</a></p>
-      <p style="font-size: 16px;"><strong>LinkedIn:</strong> ${application.linkedIn || 'N/A'}</p>
-      <p style="font-size: 16px;"><strong>Portfolio:</strong> ${application.portfolioUrl || 'N/A'}</p>
-      <p style="font-size: 16px;"><strong>Cover Letter:</strong></p>
-      <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; border-left: 4px solid #ff6b00;">
-        ${application.coverLetter || 'No cover letter provided.'}
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: auto; padding: 30px; background-color: #0b0f17; color: #f1f5f9; border-radius: 16px; border: 1px solid #1e293b;">
+      <div style="border-bottom: 1px solid #1e293b; padding-bottom: 16px; margin-bottom: 24px;">
+        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #ea580c; font-weight: 700;">New Candidate Submission</span>
+        <h2 style="color: #ffffff; margin: 6px 0 0 0; font-size: 20px;">${jobTitle || 'Open Position'}</h2>
+      </div>
+      
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+        <tr>
+          <td style="padding: 8px 0; color: #64748b; font-size: 13px; width: 30%;">Applicant</td>
+          <td style="padding: 8px 0; color: #f1f5f9; font-size: 14px; font-weight: 600;">${application.name}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Email</td>
+          <td style="padding: 8px 0; color: #f1f5f9; font-size: 14px;"><a href="mailto:${application.email}" style="color: #f97316;">${application.email}</a></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Phone</td>
+          <td style="padding: 8px 0; color: #f1f5f9; font-size: 14px;">${application.phone || 'N/A'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Resume</td>
+          <td style="padding: 8px 0; font-size: 14px;"><a href="${application.resumeUrl}" target="_blank" style="color: #10b981; font-weight: 600; text-decoration: underline;">Download / View Resume &rarr;</a></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #64748b; font-size: 13px;">LinkedIn</td>
+          <td style="padding: 8px 0; font-size: 14px;">${application.linkedIn ? `<a href="${application.linkedIn}" target="_blank" style="color: #38bdf8;">${application.linkedIn}</a>` : 'N/A'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Portfolio</td>
+          <td style="padding: 8px 0; font-size: 14px;">${application.portfolioUrl ? `<a href="${application.portfolioUrl}" target="_blank" style="color: #38bdf8;">${application.portfolioUrl}</a>` : 'N/A'}</td>
+        </tr>
+      </table>
+
+      ${application.coverLetter ? `
+        <div style="background-color: #111726; padding: 18px; border-radius: 12px; border: 1px solid #1e293b; margin-bottom: 24px;">
+          <div style="color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 8px;">Cover Letter / Note:</div>
+          <div style="color: #cbd5e1; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${application.coverLetter}</div>
+        </div>
+      ` : ''}
+
+      <div style="text-align: center; padding-top: 10px;">
+        <a href="mailto:${application.email}" style="display: inline-block; background-color: #ea580c; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 14px; margin-right: 10px;">
+          Reply to Candidate
+        </a>
+        <a href="${env.FRONTEND_URL}/admin/applications" style="display: inline-block; background-color: #1e293b; color: #f1f5f9; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; font-size: 14px; border: 1px solid #334155;">
+          Open Admin Panel
+        </a>
       </div>
     </div>
   `;
 
   await sendEmail({
     to: env.ADMIN_EMAIL,
-    subject: `New Application: ${application.name} for ${jobTitle}`,
+    from: env.RESEND_FROM || 'JantraSoft Careers <careers@jantrasoft.online>',
+    replyTo: application.email,
+    subject: `New Application: ${application.name} — ${jobTitle}`,
     html,
   });
 }
 
-async function sendApplicationConfirmation(application) {
-  const firstName = application.name.split(' ')[0];
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-      <h2 style="color: #ff6b00;">Hi ${firstName},</h2>
-      <p style="font-size: 16px;">Thank you for applying to join the <strong>JONTRO</strong> team!</p>
-      <p style="font-size: 16px;">We've received your application and resume. Our hiring team will review your profile and if there's a match, we'll reach out to schedule an interview.</p>
-      <p style="font-size: 16px;">Good luck!<br>The JONTRO Careers Team</p>
-    </div>
-  `;
+async function sendApplicationConfirmation(application, jobTitle) {
+  try {
+    const html = getCareerConfirmationHtml({
+      name: application.name,
+      jobTitle: jobTitle || 'Business Development & Client Acquisition Executive',
+      applicationId: application.id,
+    });
 
-  await sendEmail({
-    to: application.email,
-    subject: `Application Received - JONTRO`,
-    html,
-  });
+    const roleName = jobTitle || 'Career Opportunity';
+
+    await sendEmail({
+      to: application.email,
+      from: env.RESEND_FROM || 'JantraSoft Careers <careers@jantrasoft.online>',
+      replyTo: 'careers@jantrasoft.online',
+      subject: `Application Received: ${roleName} — JantraSoft`,
+      html,
+    });
+  } catch (error) {
+    console.error('[sendApplicationConfirmation Error]:', error);
+  }
 }
 
 module.exports = {
