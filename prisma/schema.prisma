@@ -106,6 +106,8 @@ model Project {
   slug          String       @unique
   client        String
   thumbnail     String?
+  mobileThumbnail String?
+  images        String[]     @default([])
   liveUrl       String?
   githubUrl     String?
   category      String[]

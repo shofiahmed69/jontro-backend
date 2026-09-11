@@ -73,6 +73,8 @@ router.post('/', async (req, res) => {
             slug: slug || title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
             client: client || '',
             thumbnail: thumbnail || '',
+            mobileThumbnail: mobileThumbnail || null,
+            images: Array.isArray(images) ? images : (images ? [images] : []),
             liveUrl: liveUrl || '',
             githubUrl: githubUrl || '',
             category: Array.isArray(category)
@@ -103,7 +105,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const {
-            title, slug, client, thumbnail,
+            title, slug, client, thumbnail, mobileThumbnail, images,
             category, description, challenge, approach,
             features, techStack, results,
             featured, published, order, liveUrl, githubUrl
@@ -116,6 +118,8 @@ router.put('/:id', async (req, res) => {
                 ...(slug !== undefined ? { slug } : {}),
                 ...(client !== undefined ? { client } : {}),
                 ...(thumbnail !== undefined ? { thumbnail } : {}),
+                ...(mobileThumbnail !== undefined ? { mobileThumbnail } : {}),
+                ...(images !== undefined ? { images: Array.isArray(images) ? images : [] } : {}),
                 ...(liveUrl !== undefined ? { liveUrl: liveUrl || '' } : {}),
                 ...(githubUrl !== undefined ? { githubUrl: githubUrl || '' } : {}),
                 ...(category !== undefined
